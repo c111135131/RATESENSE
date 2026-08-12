@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+backend/adapt.db
+backend/app/media/recordings/*
+!backend/app/media/recordings/.gitkeep
+node_modules/
+.DS_Store
+README.md

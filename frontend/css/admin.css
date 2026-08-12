@@ -1,0 +1,137 @@
+.admin-body {
+  min-height: 100vh;
+}
+.admin-root {
+  min-height: 100vh;
+  padding: 2rem clamp(1rem, 4vw, 3rem);
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.admin-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+.admin-title {
+  font-family: "Playfair Display", serif;
+  font-weight: 800;
+  color: var(--orange);
+  font-size: 1.8rem;
+  margin: 0;
+}
+.admin-actions { display: flex; gap: 0.75rem; flex-wrap: wrap; }
+
+.admin-btn {
+  border: 1.5px solid var(--white);
+  color: var(--white);
+  background: transparent;
+  padding: 0.55rem 1.25rem;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.admin-btn:hover { background: var(--white); color: var(--black); }
+.admin-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.admin-btn.danger { border-color: var(--orange); color: var(--orange); }
+.admin-btn.danger:hover { background: var(--orange); color: var(--white); }
+.admin-btn.primary { background: var(--orange); border-color: var(--orange); color: var(--white); }
+.admin-btn.primary:hover { opacity: 0.85; background: var(--orange); color: var(--white); }
+.admin-btn.small { padding: 0.35rem 0.9rem; font-size: 0.78rem; }
+
+/* ---------- Login ---------- */
+.admin-login {
+  max-width: 22rem;
+  margin: 15vh auto 0;
+  text-align: center;
+}
+.admin-login h1 { font-size: 1.6rem; margin-bottom: 1.75rem; }
+.admin-field { text-align: left; margin-bottom: 1rem; }
+.admin-field label { display: block; font-size: 0.8rem; opacity: 0.8; margin-bottom: 0.3rem; }
+.admin-field input {
+  width: 100%;
+  padding: 0.6rem 0.8rem;
+  border-radius: 0.35rem;
+  border: 1px solid rgba(255,255,255,0.25);
+  background: rgba(255,255,255,0.06);
+  color: var(--white);
+  font-size: 0.95rem;
+}
+.admin-field input:focus { outline: 1.5px solid var(--orange); }
+.admin-error {
+  color: var(--orange);
+  font-size: 0.85rem;
+  min-height: 1.2rem;
+  margin: 0.5rem 0 1rem;
+}
+
+/* ---------- Tables ---------- */
+.admin-table-wrap { overflow-x: auto; margin-bottom: 2rem; border: 1px solid rgba(255,255,255,0.12); border-radius: 0.5rem; }
+.admin-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+.admin-table th, .admin-table td {
+  padding: 0.6rem 0.8rem;
+  text-align: left;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  white-space: nowrap;
+}
+.admin-table th { color: var(--orange); font-weight: 700; background: rgba(255,255,255,0.03); }
+.admin-table tr:last-child td { border-bottom: none; }
+.admin-table tr.clickable { cursor: pointer; }
+.admin-table tr.clickable:hover { background: rgba(255,255,255,0.05); }
+
+.admin-section-title {
+  font-family: "Playfair Display", serif;
+  font-size: 1.15rem;
+  margin: 2rem 0 0.75rem;
+  color: var(--white);
+}
+
+.admin-empty { opacity: 0.6; font-size: 0.85rem; padding: 1.5rem; text-align: center; }
+
+/* ---------- Param editor inputs inside the media table ---------- */
+.admin-table input, .admin-table select {
+  width: 6.5rem;
+  padding: 0.3rem 0.5rem;
+  border-radius: 0.3rem;
+  border: 1px solid rgba(255,255,255,0.25);
+  background: rgba(255,255,255,0.06);
+  color: var(--white);
+  font-size: 0.82rem;
+}
+.admin-table input::placeholder { color: rgba(255,255,255,0.35); }
+.admin-override-badge,
+.system-auto-badge {
+  font-size: 0.68rem;
+  padding: 0.1rem 0.4rem;
+  border-radius: 999px;
+  margin-left: 0.4rem;
+  background: rgba(233, 78, 27, 0.25);
+  color: var(--orange);
+}
+
+.admin-toolbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem; flex-wrap: wrap; gap: 0.75rem; }
+.admin-back { background: none; border: none; color: var(--white); opacity: 0.75; cursor: pointer; font-size: 0.85rem; padding: 0; }
+.admin-back:hover { opacity: 1; text-decoration: underline; }
+
+.admin-status-pill {
+  display: inline-block;
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  border: 1px solid currentColor;
+}
+.admin-status-IN_PROGRESS { color: var(--yellow); }
+.admin-status-COMPLETED { color: #5bd67a; }
+.admin-status-ABANDONED { color: rgba(255,255,255,0.5); }
+.admin-status-EXPIRED { color: var(--orange); }
+
+.admin-toast {
+  position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%);
+  background: var(--white); color: #111; padding: 0.65rem 1.4rem; border-radius: 0.4rem;
+  font-size: 0.85rem; box-shadow: 0 6px 24px rgba(0,0,0,0.4); z-index: 50;
+}

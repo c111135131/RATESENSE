@@ -1,0 +1,375 @@
+import csv
+import io
+import os
+
+from fastapi import APIRouter, Depends
+from fastapi.responses import StreamingResponse
+from sqlalchemy.orm import Session
+
+from .. import models, params, speed_utils
+from ..auth import require_admin, verify_login
+from ..database import get_db
+from ..responses import ok, fail
+from ..schemas import AdminLoginRequest, MediaParamsOverride
+from ..timeutils import now_toronto
+
+router = APIRouter(prefix="/api/v1/admin", tags=["admin"])
+
+CSV_FIELDS = [
+    "trial_id", "experiment_id", "phase", "trial_index", "media_id",
+    "selected_speed", "actual_speed", "estimated_speed", "hesitation_ms",
+    "delay_ms", "direction", "threshold_speed", "tolerance_speed", "created_at",
+]
+
+def _media_name_lookup(db: Session) -> dict:
+    """media_id -> filename, for turning the numeric media_id on a trial
+    into something a human can actually read (requirement: Trials table
+    and CSV export should show the video's filename, not its raw id)."""
+    return {m.media_id: m.filename for m in db.query(models.Media).all()}
+
+def _media_name_for(media_id, lookup: dict) -> str:
+    if media_id is None:
+        return "Self-Recording"
+    return lookup.get(media_id, f"media_id={media_id}")
+
+def _effective_phase34_params(experiment_id: str, trial_index: int, p3_override, p4_dir_override, p4_delay_override, p4_tick_override) -> dict:
+    """Resolve the ACTUAL value that would be used for this experiment
+    right now -- override if set, else the same deterministic
+    hash-based value get_next_trial() would compute. This is what the
+    admin panel displays instead of a bare "auto" placeholder (requirement:
+    show the real experiment parameter, not just whether it's overridden)."""
+    phase3_actual_speed = (
+        p3_override if p3_override is not None
+        else speed_utils.trial_actual_speed(experiment_id, 3, trial_index)
+    )
+    phase4_direction = (
+        p4_dir_override if p4_dir_override is not None
+        else speed_utils.trial_direction(experiment_id, 4, trial_index)
+    )
+    phase4_delay_ms = p4_delay_override if p4_delay_override is not None else params.PHASE4_DELAY_MS
+    phase4_tick_ms = p4_tick_override if p4_tick_override is not None else params.PHASE4_TICK_MS
+
+    return {
+        "phase3_actual_speed": phase3_actual_speed,
+        "phase3_actual_speed_is_override": p3_override is not None,
+        "phase4_direction": phase4_direction,
+        "phase4_direction_is_override": p4_dir_override is not None,
+        "phase4_delay_ms": phase4_delay_ms,
+        "phase4_delay_ms_is_override": p4_delay_override is not None,
+        "phase4_tick_ms": phase4_tick_ms,
+        "phase4_tick_ms_is_override": p4_tick_override is not None,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Auth (no Depends(require_admin) here -- this IS the endpoint that issues
+# the token in the first place)
+# ---------------------------------------------------------------------------
+@router.post("/login")
+def admin_login(payload: AdminLoginRequest):
+    token = verify_login(payload.username, payload.password)
+    if not token:
+        return fail("Invalid username or password.", "INVALID_CREDENTIALS", 401)
+    return ok({"token": token})
+
+# ---------------------------------------------------------------------------
+# Everything below requires a valid X-Admin-Token (see ../auth.py)
+# ---------------------------------------------------------------------------
+@router.get("/export-csv")
+def export_csv(db: Session = Depends(get_db), _admin: None = Depends(require_admin)):
+    """Generate experiment_data.csv and download it immediately (SRS 9)."""
+    trials = db.query(models.ExperimentTrial).all()
+    media_lookup = _media_name_lookup(db)
+
+    buffer = io.StringIO()
+    writer = csv.DictWriter(buffer, fieldnames=CSV_FIELDS)
+    writer.writeheader()
+    for t in trials:
+        row = {
+            "trial_id": t.trial_id,
+            "experiment_id": t.experiment_id,
+            "phase": t.phase,
+            "trial_index": t.trial_index,
+            "media_name": _media_name_for(t.media_id, media_lookup),
+            "selected_speed": t.selected_speed,
+            "actual_speed": t.actual_speed,
+            "estimated_speed": t.estimated_speed,
+            "hesitation_ms": t.hesitation_ms,
+            "delay_ms": t.delay_ms,
+            "direction": t.direction,
+            "threshold_speed": t.threshold_speed,
+            "tolerance_speed": t.tolerance_speed,
+            "created_at": t.created_at,
+        }
+        writer.writerow(row)
+    buffer.seek(0)
+
+    return StreamingResponse(
+        iter([buffer.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=experiment_data.csv"},
+    )
+
+
+@router.post("/cleanup")
+def cleanup_expired(db: Session = Depends(get_db), _admin: None = Depends(require_admin)):
+    """Find expired experiments, delete self-recordings, update status,
+    keep experiment data (SRS section 7)."""
+    now = now_toronto()
+    expired = (
+        db.query(models.Experiment)
+        .filter(models.Experiment.expired_at.isnot(None), models.Experiment.expired_at < now)
+        .filter(models.Experiment.status == models.ExperimentStatus.IN_PROGRESS)
+        .all()
+    )
+
+    count = 0
+    for exp in expired:
+        for rec in exp.self_recordings:
+            if not rec.deleted:
+                if rec.video_path and os.path.exists(rec.video_path):
+                    try:
+                        os.remove(rec.video_path)
+                    except OSError:
+                        pass
+                rec.deleted = True
+        exp.status = models.ExperimentStatus.EXPIRED
+        count += 1
+
+    db.commit()
+    return ok({"expired_count": count})
+
+# ---------------------------------------------------------------------------
+# DB browsing (so the admin doesn't need to open a separate DB tool)
+# ---------------------------------------------------------------------------
+@router.get("/experiments")
+def list_experiments(db: Session = Depends(get_db), _admin: None = Depends(require_admin)):
+    rows = db.query(models.Experiment).order_by(models.Experiment.created_at.desc()).all()
+    return ok([
+        {
+            "experiment_id": e.experiment_id,
+            "created_at": e.created_at.isoformat() if e.created_at else None,
+            "updated_at": e.updated_at.isoformat() if e.updated_at else None,
+            "current_state": e.current_state,
+            "current_phase": e.current_phase,
+            "current_trial": e.current_trial,
+            "status": e.status.value,
+            "expired_at": e.expired_at.isoformat() if e.expired_at else None,
+        }
+        for e in rows
+    ])
+
+
+@router.get("/experiments/{experiment_id}")
+def get_experiment_detail(experiment_id: str, db: Session = Depends(get_db), _admin: None = Depends(require_admin)):
+    exp = db.query(models.Experiment).get(experiment_id)
+    if not exp:
+        return fail("Experiment not found.", "EXPERIMENT_NOT_FOUND", 404)
+
+    media_rows = (
+        db.query(models.ExperimentMedia)
+        .filter(models.ExperimentMedia.experiment_id == experiment_id)
+        .order_by(models.ExperimentMedia.display_order)
+        .all()
+    )
+    trial_rows = (
+        db.query(models.ExperimentTrial)
+        .filter(models.ExperimentTrial.experiment_id == experiment_id)
+        .order_by(models.ExperimentTrial.phase, models.ExperimentTrial.trial_index)
+        .all()
+    )
+    recording_rows = (
+        db.query(models.SelfRecording)
+        .filter(models.SelfRecording.experiment_id == experiment_id)
+        .all()
+    )
+    media_lookup = _media_name_lookup(db)
+
+    # --- the 5 predefined videos: read-only here (global override, edit
+    # via PUT /admin/media/{media_id}/params in the Video Library screen) ---
+    media_entries = []
+    for m in media_rows:
+        effective = _effective_phase34_params(
+            experiment_id, m.display_order,
+            m.media.phase3_actual_speed_override if m.media else None,
+            m.media.phase4_direction_override if m.media else None,
+            m.media.phase4_delay_ms_override if m.media else None,
+            m.media.phase4_tick_ms_override if m.media else None,
+        )
+        media_entries.append({
+            "media_id": m.media_id,
+            "display_order": m.display_order,
+            "filename": m.media.filename if m.media else None,
+            "media_path": m.media.media_path if m.media else None,
+            **effective,
+        })
+
+    # --- the self-recorded video (6th slot): EDITABLE right here, since
+    # its override only makes sense scoped to this one experiment ---
+    active_recording = next((r for r in recording_rows if not r.deleted), None)
+    self_recording_params = None
+    if active_recording:
+        trial_index = len(media_rows) + 1  # self-recording is always the last slot
+        effective = _effective_phase34_params(
+            experiment_id, trial_index,
+            active_recording.phase3_actual_speed_override,
+            active_recording.phase4_direction_override,
+            active_recording.phase4_delay_ms_override,
+            active_recording.phase4_tick_ms_override,
+        )
+        self_recording_params = {
+            "recording_id": active_recording.recording_id,
+            # Raw override values (None = not overridden) -- used to
+            # pre-fill the EDITABLE inputs in the admin UI, as opposed to
+            # `effective` below which is what's actually in play right now.
+            "phase3_actual_speed_override": active_recording.phase3_actual_speed_override,
+            "phase4_direction_override": active_recording.phase4_direction_override,
+            "phase4_delay_ms_override": active_recording.phase4_delay_ms_override,
+            "phase4_tick_ms_override": active_recording.phase4_tick_ms_override,
+            **effective,
+        }
+
+    return ok({
+        "experiment": {
+            "experiment_id": exp.experiment_id,
+            "created_at": exp.created_at.isoformat() if exp.created_at else None,
+            "updated_at": exp.updated_at.isoformat() if exp.updated_at else None,
+            "current_state": exp.current_state,
+            "current_phase": exp.current_phase,
+            "current_trial": exp.current_trial,
+            "status": exp.status.value,
+            "expired_at": exp.expired_at.isoformat() if exp.expired_at else None,
+        },
+        "media": media_entries,
+        "self_recording_params": self_recording_params,
+        "self_recordings": [
+            {
+                "recording_id": r.recording_id,
+                "video_path": r.video_path,
+                "deleted": r.deleted,
+                "upload_time": r.upload_time.isoformat() if r.upload_time else None,
+            }
+            for r in recording_rows
+        ],
+        "trials": [
+            {
+                "trial_id": t.trial_id,
+                "phase": t.phase,
+                "trial_index": t.trial_index,
+                "media_id": t.media_id,
+                "media_name": _media_name_for(t.media_id, media_lookup),
+                "selected_speed": t.selected_speed,
+                "actual_speed": t.actual_speed,
+                "estimated_speed": t.estimated_speed,
+                "hesitation_ms": t.hesitation_ms,
+                "delay_ms": t.delay_ms,
+                "direction": t.direction,
+                "threshold_speed": t.threshold_speed,
+                "tolerance_speed": t.tolerance_speed,
+                "created_at": t.created_at.isoformat() if t.created_at else None,
+            }
+            for t in trial_rows
+        ],
+    })
+
+
+# ---------------------------------------------------------------------------
+# Video parameter overrides (admin panel feature).
+# These are GLOBAL -- keyed only on media_id, not on any one experiment --
+# so changing a video's parameters here affects every future experiment
+# that uses that video, per the requirement.
+# ---------------------------------------------------------------------------
+@router.get("/media")
+def list_media(db: Session = Depends(get_db), _admin: None = Depends(require_admin)):
+    rows = db.query(models.Media).order_by(models.Media.media_id).all()
+    return ok([
+        {
+            "media_id": m.media_id,
+            "filename": m.filename,
+            "media_path": m.media_path,
+            "phase3_actual_speed": m.phase3_actual_speed_override,
+            "phase4_direction": m.phase4_direction_override,
+            "phase4_delay_ms": m.phase4_delay_ms_override,
+            "phase4_tick_ms": m.phase4_tick_ms_override,
+        }
+        for m in rows
+    ])
+
+
+@router.put("/media/{media_id}/params")
+def update_media_params(
+    media_id: int,
+    payload: MediaParamsOverride,
+    db: Session = Depends(get_db),
+    _admin: None = Depends(require_admin),
+):
+    row = db.query(models.Media).get(media_id)
+    if not row:
+        return fail("Media not found.", "NOT_FOUND", 404)
+
+    # exclude_unset (not exclude_none!) so a field the client didn't send
+    # is left untouched, but a field explicitly sent as `null` DOES clear
+    # that specific override.
+    updates = payload.dict(exclude_unset=True)
+    if "phase3_actual_speed" in updates:
+        row.phase3_actual_speed_override = updates["phase3_actual_speed"]
+    if "phase4_direction" in updates:
+        row.phase4_direction_override = updates["phase4_direction"]
+    if "phase4_delay_ms" in updates:
+        row.phase4_delay_ms_override = updates["phase4_delay_ms"]
+    if "phase4_tick_ms" in updates:
+        row.phase4_tick_ms_override = updates["phase4_tick_ms"]
+
+    db.commit()
+    db.refresh(row)
+
+    return ok({
+        "media_id": row.media_id,
+        "filename": row.filename,
+        "phase3_actual_speed": row.phase3_actual_speed_override,
+        "phase4_direction": row.phase4_direction_override,
+        "phase4_delay_ms": row.phase4_delay_ms_override,
+        "phase4_tick_ms": row.phase4_tick_ms_override,
+    })
+
+# ---------------------------------------------------------------------------
+# Self-recording parameter overrides (admin panel feature).
+# PER-EXPERIMENT -- unlike Media.*_override, a self-recorded video is
+# unique to one experiment, so this only ever affects that one experiment.
+# ---------------------------------------------------------------------------
+@router.put("/experiments/{experiment_id}/self-recording/params")
+def update_self_recording_params(
+    experiment_id: str,
+    payload: MediaParamsOverride,
+    db: Session = Depends(get_db),
+    _admin: None = Depends(require_admin),
+):
+    row = (
+        db.query(models.SelfRecording)
+        .filter(models.SelfRecording.experiment_id == experiment_id, models.SelfRecording.deleted.is_(False))
+        .order_by(models.SelfRecording.recording_id.desc())
+        .first()
+    )
+    if not row:
+        return fail("No active self-recording found for this experiment.", "NOT_FOUND", 404)
+
+    updates = payload.dict(exclude_unset=True)
+    if "phase3_actual_speed" in updates:
+        row.phase3_actual_speed_override = updates["phase3_actual_speed"]
+    if "phase4_direction" in updates:
+        row.phase4_direction_override = updates["phase4_direction"]
+    if "phase4_delay_ms" in updates:
+        row.phase4_delay_ms_override = updates["phase4_delay_ms"]
+    if "phase4_tick_ms" in updates:
+        row.phase4_tick_ms_override = updates["phase4_tick_ms"]
+
+    db.commit()
+    db.refresh(row)
+
+    return ok({
+        "recording_id": row.recording_id,
+        "phase3_actual_speed": row.phase3_actual_speed_override,
+        "phase4_direction": row.phase4_direction_override,
+        "phase4_delay_ms": row.phase4_delay_ms_override,
+        "phase4_tick_ms": row.phase4_tick_ms_override,
+    })
