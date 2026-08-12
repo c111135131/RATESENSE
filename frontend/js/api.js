@@ -1,5 +1,5 @@
 /* Thin wrapper around the ADAPT REST API (SRS section 8). */
-const API_BASE = window.ADAPT_API_BASE || "http://127.0.0.1:8123/api/v1";
+const API_BASE = window.ADAPT_API_BASE || "https://ratesense-backend.onrender.com";
 
 // The backend serves real video files from /media via FastAPI's StaticFiles
 // mount (see backend/app/main.py). The frontend is usually a *different*
