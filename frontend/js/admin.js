@@ -2,8 +2,8 @@
    js/router.js, js/app.js, etc. (the participant-facing app) -- the admin
    panel has a completely different auth model (X-Admin-Token) and should
    never accidentally share state/code paths with the experiment SPA. */
-
-const ADMIN_API_BASE = window.ADAPT_API_BASE || "http://127.0.0.1:8123/api/v1";
+//http://127.0.0.1:8123/api/v1
+const ADMIN_API_BASE = window.ADAPT_API_BASE || "https://ratesense-backend.onrender.com/api/v1";
 const TOKEN_KEY = "adapt_admin_token";
 
 const AdminState = {
