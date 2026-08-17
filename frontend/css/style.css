@@ -234,20 +234,20 @@ html, body {
   font-size: clamp(2.2rem, 6vw, 3.2rem);
 }
 .stage .rec-badge {
-  position: absolute; top: 1rem; left: 1rem;
+  position: absolute; top: 1rem; left: 1.5rem;
   color: var(--red); font-weight: bold; letter-spacing: 0.05em;
-  display: flex; align-items: center; gap: 0.4rem;
+  display: flex; align-items: center; gap: 0.4rem; font-size: 1.5rem;
 }
 .stage .rec-badge::before {
   content: ""; width: 10px; height: 10px; border-radius: 50%; background: var(--red);
 }
 .stage .hint {
   position: absolute; bottom: 0.9rem; left: 0; right: 0;
-  font-size: 1.1rem; opacity: 0.85;
+  font-size: 1.3rem; opacity: 0.85;
 }
 .stage .side-label {
   position: absolute; top: 50%; transform: translateY(-50%);
-  font-weight: bold; font-size: 1.1rem; opacity: 0.85;
+  font-weight: bold; font-size: 2rem; opacity: 0.85;
 }
 .stage .side-label.left { left: 1rem; }
 .stage .side-label.right { right: 1rem; }

@@ -81,9 +81,7 @@ function moduleRow() {
 
 /* Wires up hover (mouse) + focus (keyboard/touch) on the circles rendered
    by moduleRow(), showing introTextByPhase[phase] in the tooltip beneath
-   the row. Call this once, right after the markup containing moduleRow()'s
-   output has actually been inserted into the DOM (renderInto() replaces
-   #app's contents, so this can't run before that). */
+   the row.*/
 function attachModuleRowTooltips(introTextByPhase) {
   const row = document.getElementById("moduleRow");
   const tooltip = document.getElementById("moduleTooltip");
@@ -94,7 +92,7 @@ function attachModuleRowTooltips(introTextByPhase) {
     const text = introTextByPhase[phase] || "";
 
     const show = () => {
-      tooltip.textContent = text;
+      tooltip.innerHTML = text;
       tooltip.classList.add("visible");
     };
     const hide = () => tooltip.classList.remove("visible");

@@ -1,8 +1,8 @@
 const MODULE_COLOR_VAR = { 2: "var(--orange-2)", 3: "var(--yellow)", 4: "var(--tan)" };
 const HOW_IT_WORKS_TEXT = {
-  2: { left: "Move mouse, left to slow, right to speed up.<br/>Aim to find the <b style='color:var(--orange2)'>NATURAL</b> motion speed.", right: "CLICK to lock in your response."},
-  3: { left: "Move mouse, left to slow, right to speed up.<br/>Aim to find the <b style='color:var(--yellow)'>CURRENT</b> playback rate.", right: "CLICK to lock in your response." },
-  4: { left: "<b style='color:var(--tan)>CLICK</b> the moment the <b style='color:var(--tan)'>speed changes from 1x.</b>", right: "<b style='color:var(--tan)'>CLICK AGAIN</b> when it feels <b style='color:var(--tan)'>too fast or too slow.</b>" },
+  2: { left: "Move mouse, left to slow, right to speed up.<br/>Aim to find the <b style='color: var(--orange-2)'>NATURAL</b> motion speed.", right: "<b style='color: var(--orange-2)'>CLICK</b> to lock in your response."},
+  3: { left: "Move mouse, left to slow, right to speed up.<br/>Aim to find the <b style='color:var(--yellow)'>CURRENT playback rate</b>.", right: "<b style='color:var(--yellow)'>CLICK</b> to lock in your response." },
+  4: { left: "<b style='color: var(--tan)'>CLICK</b> the moment the speed <b style='color: var(--tan)'>CHANGES FROM 1X.</b>", right: "<b style='color:var(--tan)'>CLICK AGAIN</b> when it feels <b style='color:var(--tan)'>TOO FAST or TOO SLOW.</b>" },
 };
 
 const DEMO_MEDIA_PATH = "../assets/demo_gif/";
@@ -210,7 +210,7 @@ function revealResultAndContinue(html, onContinue, delayMs = 1500) {
    backend-provided, per SRS: seed = hash(experimentID+phase+trialIndex)). */
 function runPhase2(video, trialParams, isDemo, onFinish) {
   const stage = document.getElementById("stage");
-  document.getElementById("hint").textContent = "Move your mouse left/right, then CLICK when the speed feels natural.";
+  document.getElementById("hint").innerHTML = "Move your mouse left/right, then <b>CLICK</b> when the speed feels <b style='color: var(--orange-2)'>NATURAL</b>.";
   const startTime = performance.now();
   const noise = trialParams.noise || 0;
 
@@ -247,7 +247,7 @@ function runPhase2(video, trialParams, isDemo, onFinish) {
 function runPhase3(video, trialParams, isDemo, onFinish) {
   const stage = document.getElementById("stage");
   const readout = document.getElementById("readout");
-  document.getElementById("hint").textContent = "Move your mouse to match the CURRENT playback rate, then CLICK to confirm.";
+  document.getElementById("hint").innerHTML = "Move your mouse to match the <b style='color:var(--yellow)'>CURRENT PLAYBACK RATE</b>, then <b>CLICK</b> to confirm.";
   readout.style.visibility = "visible";
   const startTime = performance.now();
 
@@ -300,7 +300,7 @@ function runPhase4(video, trialParams, isDemo, onFinish) {
   const stage = document.getElementById("stage");
   const hint = document.getElementById("hint");
   const readout = document.getElementById("readout");
-  hint.textContent = "CLICK the moment the speed changes from 1x.";
+  hint.innerHTML = "<b style='color: var(--tan)'>CLICK</b> the moment the speed <b style='color: var(--tan)'>CHANGES FROM 1X.</b>";
   video.playbackRate = 1.0;
 
   const { direction, delay_ms: delayMs, tick_ms: tickMs, step } = trialParams;
@@ -325,7 +325,7 @@ function runPhase4(video, trialParams, isDemo, onFinish) {
      
       readout.style.visibility = "visible";
       readout.innerHTML = `Threshold: ${Math.round(thresholdSpeed * 100)}%`;
-      hint.textContent = "CLICK AGAIN when it feels too fast or too slow.";
+      hint.innerHTML = "<b style='color:var(--tan)'>CLICK AGAIN</b> when it feels <b style='color:var(--tan)'>TOO FAST or TOO SLOW.</b>";
       return;
     }
     // second click

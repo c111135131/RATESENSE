@@ -117,7 +117,7 @@ function runActualRecording(stream, seconds) {
   const overlay = document.getElementById("overlay");
   overlay.innerHTML = `
     <div class="rec-badge">REC</div>
-    <div class="serif" style="font-size:2rem; font-weight:800; margin: 0.75rem 0 0.5rem;">You are recording now...</div>
+    <div class="serif" style="font-size:2rem; font-weight:800; margin: 0.75rem 0 0.5rem; color: var(--red)">You are recording now...</div>
     <div class="countdown-ring" style='color:var(--white); background-color:var(--red)' id="countdown">${seconds}</div>
   `;
 
