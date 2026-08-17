@@ -16,7 +16,7 @@ from ..timeutils import now_toronto
 router = APIRouter(prefix="/api/v1/admin", tags=["admin"])
 
 CSV_FIELDS = [
-    "trial_id", "experiment_id", "phase", "trial_index", "media_id",
+    "experiment_id", "phase", "trial_index", "media_name",
     "selected_speed", "actual_speed", "estimated_speed", "hesitation_ms",
     "delay_ms", "direction", "threshold_speed", "tolerance_speed", "created_at",
 ]
@@ -86,7 +86,6 @@ def export_csv(db: Session = Depends(get_db), _admin: None = Depends(require_adm
     writer.writeheader()
     for t in trials:
         row = {
-            "trial_id": t.trial_id,
             "experiment_id": t.experiment_id,
             "phase": t.phase,
             "trial_index": t.trial_index,

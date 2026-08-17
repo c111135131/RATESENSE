@@ -16,8 +16,9 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "https://ratesense.onrender.com",  
-        "http://127.0.0.1:8123",          
-        "http://127.0.0.1:5500",          
+        "http://127.0.0.1:5173",          
+        "http://127.0.0.1:5500",
+        "http://127.0.0.1:8123"     
     ],
     allow_credentials=True,
     allow_methods=["*"],
