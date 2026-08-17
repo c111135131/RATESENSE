@@ -13,14 +13,6 @@ def _ordered_media_for_experiment(db: Session, experiment_id: str):
     """5 predefined videos (randomized order at experiment creation) followed
     by the participant's own self-recorded video -- 6 videos total, used
     identically across Phase 2/3/4 (SRS section 5).
-
-    Each of the 5 predefined videos also carries its admin-settable
-    parameter overrides -- these live on the Media row itself (not on this
-    experiment's ExperimentMedia row), so an override applies to EVERY
-    experiment that ever uses this video, not just the current one. See
-    get_next_trial()'s "override wins if set" logic below. The
-    self-recorded video is not a Media row at all, so it never has
-    overrides (matches the admin panel's scope: "5 個影片的實驗速率").
     """
     rows = (
         db.query(models.ExperimentMedia)

@@ -3,16 +3,6 @@
 SRS spec (Phase 2 Noise):
     seed = hash(experimentID + phase + trialIndex)
     noise = Random(seed)
-
-The same seeding scheme is reused for Phase 3's `actual_speed` and Phase
-4's `direction`, so every backend-owned experimental parameter is:
-  - generated before playback
-  - fixed during one trial
-  - different for every trial (different trial_key)
-  - the SAME after a page refresh
-
-`trial_key` accepts either an int (real trial_index, 1..6) or a string
-(e.g. "demo") so Demo pages can get their own 'stable-but-separate' values.
 """
 import hashlib
 import random

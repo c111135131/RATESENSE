@@ -7,7 +7,7 @@ const AppState = {
   currentState: "home",
   currentPhase: 0,
   currentTrial: 0,
-  mediaList: null, // cached ExperimentMedia for the running experiment
+  mediaList: null,
 
   saveId(id) {
     this.experimentId = id;

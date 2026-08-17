@@ -1,8 +1,6 @@
-/* Standalone admin panel. Deliberately independent from js/api.js,
-   js/router.js, js/app.js, etc. (the participant-facing app) -- the admin
-   panel has a completely different auth model (X-Admin-Token) and should
-   never accidentally share state/code paths with the experiment SPA. */
-//http://127.0.0.1:8123/api/v1
+// http://127.0.0.1:8123/api/v1
+// https://ratesense-backend.onrender.com/api/v1
+
 const ADMIN_API_BASE = window.ADAPT_API_BASE || "https://ratesense-backend.onrender.com/api/v1";
 const TOKEN_KEY = "adapt_admin_token";
 
@@ -27,13 +25,7 @@ async function adminRequest(path, { method = "GET", body } = {}) {
     body: body !== undefined ? JSON.stringify(body) : undefined,
   });
 
-  // The login endpoint's own 401 (wrong username/password) is a normal,
-  // expected failure handled by AdminApi.login()'s caller -- it must NOT
-  // be treated as "an existing session token expired", or that generic
-  // handling below would stomp the login form's specific error message.
   if (res.status === 401 && path !== "/admin/login") {
-    // Token missing/invalid/expired -- force back to the login screen
-    // rather than silently failing.
     AdminState.token = null;
     sessionStorage.removeItem(TOKEN_KEY);
     renderLogin("Your session expired. Please log in again.");
@@ -52,13 +44,10 @@ const AdminApi = {
   listExperiments: () => adminRequest("/admin/experiments"),
   getExperiment: (id) => adminRequest(`/admin/experiments/${id}`),
   listMedia: () => adminRequest("/admin/media"),
-  // Global: this applies to EVERY experiment (past and future) that uses
-  // this video, not just one experiment -- see backend/app/models.py's
-  // Media.*_override columns.
+
   updateMediaParams: (mediaId, payload) =>
     adminRequest(`/admin/media/${mediaId}/params`, { method: "PUT", body: payload }),
-  // Per-experiment (NOT global) -- only affects this one experiment's
-  // unique self-recorded video.
+
   updateSelfRecordingParams: (experimentId, payload) =>
     adminRequest(`/admin/experiments/${experimentId}/self-recording/params`, { method: "PUT", body: payload }),
   cleanup: () => adminRequest("/admin/cleanup", { method: "POST" }),
@@ -233,8 +222,6 @@ async function loadExperimentDetail(experimentId) {
 function renderDetail() {
   const { experiment, media, self_recording_params, self_recordings, trials } = AdminState.detail;
 
-  // Predefined videos: READ-ONLY here (global override -- edit in Video
-  // Library). Always show the real resolved value, never a bare "auto".
   const mediaRows = media.map((m) => `
     <tr>
       <td>${m.filename || "\u2014"}</td>

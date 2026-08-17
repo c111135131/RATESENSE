@@ -22,9 +22,6 @@ CSV_FIELDS = [
 ]
 
 def _media_name_lookup(db: Session) -> dict:
-    """media_id -> filename, for turning the numeric media_id on a trial
-    into something a human can actually read (requirement: Trials table
-    and CSV export should show the video's filename, not its raw id)."""
     return {m.media_id: m.filename for m in db.query(models.Media).all()}
 
 def _media_name_for(media_id, lookup: dict) -> str:
@@ -33,11 +30,6 @@ def _media_name_for(media_id, lookup: dict) -> str:
     return lookup.get(media_id, f"media_id={media_id}")
 
 def _effective_phase34_params(experiment_id: str, trial_index: int, p3_override, p4_dir_override, p4_delay_override, p4_tick_override) -> dict:
-    """Resolve the ACTUAL value that would be used for this experiment
-    right now -- override if set, else the same deterministic
-    hash-based value get_next_trial() would compute. This is what the
-    admin panel displays instead of a bare "auto" placeholder (requirement:
-    show the real experiment parameter, not just whether it's overridden)."""
     phase3_actual_speed = (
         p3_override if p3_override is not None
         else speed_utils.trial_actual_speed(experiment_id, 3, trial_index)
@@ -203,8 +195,7 @@ def get_experiment_detail(experiment_id: str, db: Session = Depends(get_db), _ad
             **effective,
         })
 
-    # --- the self-recorded video (6th slot): EDITABLE right here, since
-    # its override only makes sense scoped to this one experiment ---
+
     active_recording = next((r for r in recording_rows if not r.deleted), None)
     self_recording_params = None
     if active_recording:
@@ -218,9 +209,6 @@ def get_experiment_detail(experiment_id: str, db: Session = Depends(get_db), _ad
         )
         self_recording_params = {
             "recording_id": active_recording.recording_id,
-            # Raw override values (None = not overridden) -- used to
-            # pre-fill the EDITABLE inputs in the admin UI, as opposed to
-            # `effective` below which is what's actually in play right now.
             "phase3_actual_speed_override": active_recording.phase3_actual_speed_override,
             "phase4_direction_override": active_recording.phase4_direction_override,
             "phase4_delay_ms_override": active_recording.phase4_delay_ms_override,
@@ -275,8 +263,6 @@ def get_experiment_detail(experiment_id: str, db: Session = Depends(get_db), _ad
 # ---------------------------------------------------------------------------
 # Video parameter overrides (admin panel feature).
 # These are GLOBAL -- keyed only on media_id, not on any one experiment --
-# so changing a video's parameters here affects every future experiment
-# that uses that video, per the requirement.
 # ---------------------------------------------------------------------------
 @router.get("/media")
 def list_media(db: Session = Depends(get_db), _admin: None = Depends(require_admin)):

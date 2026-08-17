@@ -27,10 +27,6 @@ class AdminLoginRequest(BaseModel):
 
 
 class MediaParamsOverride(BaseModel):
-    """All fields optional and independently settable. A field that is
-    OMITTED from the request body is left untouched; a field explicitly
-    sent as `null` CLEARS that override (reverts to the auto-generated
-    value). See routers/admin.py's use of `.dict(exclude_unset=True)`."""
     phase3_actual_speed: Optional[float] = None
     phase4_direction: Optional[int] = None
     phase4_delay_ms: Optional[int] = None
