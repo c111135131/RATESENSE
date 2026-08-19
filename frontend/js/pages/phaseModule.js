@@ -211,16 +211,20 @@ function revealResultAndContinue(html, onContinue, delayMs = 1500) {
 function runPhase2(video, trialParams, isDemo, onFinish) {
   const stage = document.getElementById("stage");
   document.getElementById("hint").innerHTML = "Move your mouse left/right, then <b>CLICK</b> when the speed feels <b style='color: var(--orange-2)'>NATURAL</b>.";
+  
   const startTime = performance.now();
   const noise = trialParams.noise || 0;
-
   let speed = clamp(1.0 + noise, 0.1, 3);
+
   video.preservesPitch = false;
   video.playbackRate = speed;
 
   function onMove(e) {
+    if (e.type === "touchmove") e.preventDefault();
+
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
     const rect = stage.getBoundingClientRect();
-    const pos = clamp((e.clientX - rect.left) / rect.width, 0, 1);
+    const pos = clamp((clientX - rect.left) / rect.width, 0, 1);
     speed = clamp(pos * 2 + noise, 0.1, 3);
     video.playbackRate = speed;
   }
@@ -228,6 +232,9 @@ function runPhase2(video, trialParams, isDemo, onFinish) {
   function onClick() {
     stage.removeEventListener("mousemove", onMove);
     stage.removeEventListener("click", onClick);
+    stage.removeEventListener("touchmove", onMove);
+    stage.removeEventListener("touchend", onClick);
+
     video.pause();
     const hesitation = Math.round(performance.now() - startTime);
     const finalSpeed = speed;
@@ -239,6 +246,9 @@ function runPhase2(video, trialParams, isDemo, onFinish) {
 
   stage.addEventListener("mousemove", onMove);
   stage.addEventListener("click", onClick);
+
+  stage.addEventListener("touchmove", onMove, { passive: false });
+  stage.addEventListener("touchend", onClick);
 }
 
 /* Phase 3: Speed Estimation. The video plays at a fixed, backend-chosen
@@ -258,8 +268,10 @@ function runPhase3(video, trialParams, isDemo, onFinish) {
   readout.textContent = "estimate: 100%";
 
   function onMove(e) {
+    if (e.type === "touchmove") e.preventDefault();
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
     const rect = stage.getBoundingClientRect();
-    const pos = clamp((e.clientX - rect.left) / rect.width, 0, 1);
+    const pos = clamp((clientX - rect.left) / rect.width, 0, 1);
     estimate = pos * 2; // 0% - 200%
     readout.textContent = `estimate: ${Math.round(estimate * 100)}%`;
   }
@@ -267,6 +279,8 @@ function runPhase3(video, trialParams, isDemo, onFinish) {
   function onClick() {
     stage.removeEventListener("mousemove", onMove);
     stage.removeEventListener("click", onClick);
+    stage.removeEventListener("touchmove", onMove);
+    stage.removeEventListener("touchend", onClick);
     video.pause();
     const hesitation = Math.round(performance.now() - startTime);
     const finalEstimate = estimate;
@@ -288,6 +302,9 @@ function runPhase3(video, trialParams, isDemo, onFinish) {
 
   stage.addEventListener("mousemove", onMove);
   stage.addEventListener("click", onClick);
+
+  stage.addEventListener("touchmove", onMove, { passive: false });
+  stage.addEventListener("touchend", onClick);
 }
 
 /* Phase 4: Threshold and Tolerance.
