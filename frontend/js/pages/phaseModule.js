@@ -91,8 +91,7 @@ async function runNextRealTrial(phase) {
   let trialData;
   try {
     trialData = await Api.getNextTrial(AppState.experimentId, phase);
-    console.log("start next real trial")
-    console.log("trialData =", JSON.stringify(trialData, null, 2));
+    // console.log("trialData =", JSON.stringify(trialData, null, 2));
 
   } catch (e) {
     showToast(e.message);
@@ -117,7 +116,7 @@ async function runNextRealTrial(phase) {
           ...result,
         };
 
-        console.log("submit =", JSON.stringify(payload));
+        // console.log("submit =", JSON.stringify(payload));
 
         const resp = await Api.submitTrial(payload);
 

@@ -118,7 +118,6 @@ def submit_trial(payload: TrialSubmitRequest, db: Session = Depends(get_db)):
         threshold_speed=payload.threshold_speed,
         tolerance_speed=payload.tolerance_speed,
     )
-    print(payload)
     db.add(trial)
 
     exp.current_phase = payload.phase

@@ -16,7 +16,6 @@ def assign_media(db: Session, experiment_id: str):
     predefined = seed.get_predefined_media(db)
 
     num_to_select = len(predefined)
-    print(num_to_select)
     order = random.sample(predefined, num_to_select)
     
     for idx, media in enumerate(order, start=1):
