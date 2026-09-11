@@ -31,3 +31,9 @@ class MediaParamsOverride(BaseModel):
     phase4_direction: Optional[int] = None
     phase4_delay_ms: Optional[int] = None
     phase4_tick_ms: Optional[int] = None
+
+class TesterInfo(BaseModel):
+    experiment_id: str
+    question_index: int
+    field: str
+    value: str

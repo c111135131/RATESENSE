@@ -5,7 +5,9 @@ The frontend never decides the next page -- it always asks the backend.
 
 STATE_TRANSITIONS = {
     "home": "terms-agreement",
-    "terms-agreement": "procedure",
+    "terms-agreement": "User-Quetionaire",
+    "User-Quetionaire": "procedure",
+
     "procedure": "phase1-start",
 
     "phase1-start": "phase1-instruction",

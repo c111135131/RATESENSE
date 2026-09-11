@@ -16,9 +16,12 @@ from ..timeutils import now_toronto
 router = APIRouter(prefix="/api/v1/admin", tags=["admin"])
 
 CSV_FIELDS = [
-    "experiment_id", "phase", "trial_index", "media_name",
+    "trial_id", "experiment_id", "phase", "trial_index", "media_name",
     "selected_speed", "actual_speed", "estimated_speed", "hesitation_ms",
     "delay_ms", "direction", "threshold_speed", "tolerance_speed", "created_at",
+
+    "age", "gender", "occupation", "watch_hours", "platforms",
+    "content_types", "preferred_speed", "adjust_behavior", "reasons", "satisfaction",
 ]
 
 def _media_name_lookup(db: Session) -> dict:
@@ -69,15 +72,26 @@ def admin_login(payload: AdminLoginRequest):
 # ---------------------------------------------------------------------------
 @router.get("/export-csv")
 def export_csv(db: Session = Depends(get_db), _admin: None = Depends(require_admin)):
-    """Generate experiment_data.csv and download it immediately (SRS 9)."""
+    """Generate experiment_data.csv and download it immediately (SRS 9).
+    Each trial row is joined with that experiment's survey answers (if
+    any), so every row also carries the participant's demographics --
+    makes cross-referencing "did older participants judge speed
+    differently" etc. possible directly in Excel/SPSS without a manual join."""
     trials = db.query(models.ExperimentTrial).all()
     media_lookup = _media_name_lookup(db)
+
+    # experiment_id -> TesterInfo row, built once so we do a single query
+    # instead of re-querying the DB inside the loop for every trial.
+    survey_lookup = {s.experiment_id: s for s in db.query(models.TesterInfo).all()}
 
     buffer = io.StringIO()
     writer = csv.DictWriter(buffer, fieldnames=CSV_FIELDS)
     writer.writeheader()
+
     for t in trials:
+        survey = survey_lookup.get(t.experiment_id)  # None if this experiment never did the survey
         row = {
+            "trial_id": t.trial_id,
             "experiment_id": t.experiment_id,
             "phase": t.phase,
             "trial_index": t.trial_index,
@@ -91,8 +105,19 @@ def export_csv(db: Session = Depends(get_db), _admin: None = Depends(require_adm
             "threshold_speed": t.threshold_speed,
             "tolerance_speed": t.tolerance_speed,
             "created_at": t.created_at,
+            "age": survey.age if survey else None,
+            "gender": survey.gender if survey else None,
+            "occupation": survey.occupation if survey else None,
+            "watch_hours": survey.watch_hours if survey else None,
+            "platforms": survey.platforms if survey else None,
+            "content_types": survey.content_types if survey else None,
+            "preferred_speed": survey.preferred_speed if survey else None,
+            "adjust_behavior": survey.adjust_behavior if survey else None,
+            "reasons": survey.reasons if survey else None,
+            "satisfaction": survey.satisfaction if survey else None,
         }
         writer.writerow(row)
+
     buffer.seek(0)
 
     return StreamingResponse(

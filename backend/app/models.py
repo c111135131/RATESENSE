@@ -118,3 +118,24 @@ class ExperimentTrial(Base):
 
     experiment = relationship("Experiment", back_populates="trials")
     media = relationship("Media")
+
+class TesterInfo(Base):
+    """Tester info"""
+    __tablename__ = "TesterInfo"
+
+    experiment_id = Column(String, ForeignKey("experiments.experiment_id"), primary_key=True)
+    current_question = Column(Integer, default=0, nullable=False)  # 0..10, how many questions answered so far
+    completed = Column(Boolean, default=False, nullable=False)
+
+    age = Column(String, nullable=True)
+    gender = Column(String, nullable=True)
+    occupation = Column(String, nullable=True)
+    watch_hours = Column(String, nullable=True)
+    platforms = Column(String, nullable=True)
+    content_types = Column(String, nullable=True)
+    preferred_speed = Column(String, nullable=True)
+    adjust_behavior = Column(String, nullable=True)
+    reasons = Column(String, nullable=True)
+    satisfaction = Column(String, nullable=True)
+
+    updated_at = Column(DateTime, default=now_toronto, onupdate=now_toronto)

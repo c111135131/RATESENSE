@@ -1,6 +1,7 @@
 const STATE_HANDLERS = {
   "home": () => Pages.home(),
   "terms-agreement": () => Pages["terms-agreement"](),
+  "User-Quetionaire": () => Pages.userQuestionnaire(),
   "procedure": () => Pages.procedure(),
 
   "phase1-start": () => Pages.phaseStart(1)(),

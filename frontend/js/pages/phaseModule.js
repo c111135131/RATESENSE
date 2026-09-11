@@ -1,6 +1,6 @@
 const MODULE_COLOR_VAR = { 2: "var(--orange-2)", 3: "var(--yellow)", 4: "var(--tan)" };
 const HOW_IT_WORKS_TEXT = {
-  2: { left: "Move mouse, left to slow, right to speed up.<br/>Aim to find the <b style='color: var(--orange-2)'>NATURAL</b> motion speed.", right: "<b style='color: var(--orange-2)'>CLICK</b> to lock in your response."},
+  2: { left: "Move mouse, left to slow, right to speed up.<br/>Aim to find the <b style='color: var(--orange-2)'>NATURAL</b> motion speed.", right: "<b style='color: var(--orange-2)'>CLICK</b> to lock in your response." },
   3: { left: "Move mouse, left to slow, right to speed up.<br/>Aim to find the <b style='color:var(--yellow)'>CURRENT playback rate</b>.", right: "<b style='color:var(--yellow)'>CLICK</b> to lock in your response." },
   4: { left: "<b style='color: var(--tan)'>CLICK</b> the moment the speed <b style='color: var(--tan)'>CHANGES FROM 1X.</b>", right: "<b style='color:var(--tan)'>CLICK AGAIN</b> when it feels <b style='color:var(--tan)'>TOO FAST or TOO SLOW.</b>" },
 };
@@ -91,6 +91,7 @@ async function runNextRealTrial(phase) {
   let trialData;
   try {
     trialData = await Api.getNextTrial(AppState.experimentId, phase);
+    console.log("start next real trial")
     console.log("trialData =", JSON.stringify(trialData, null, 2));
 
   } catch (e) {
@@ -150,14 +151,14 @@ async function runInteractiveTrial({ phase, mediaPath, isDemo, trialIndex, total
   }
 
   const silent = isSilentPhase(phase);
-  
+
   renderInto(pageShell(`
     ${!isDemo ? `<div class="progress-dots">${dots}</div>` : ""}
     <div class="stage${isDemo ? " demo-frame" : ""}" id="stage">
       <video id="trialVideo" src="${videoUrl}"${silent ? " muted" : ""} loop playsinline></video>
       <div class="stage-gate" id="stageGate">Loading video&hellip;</div>
       <div class="stage-overlay">
-        <div class="result-readout" id="readout" style="visibility:hidden;">--</div>
+        <div class="result-readout" id="readout" style="visibility:hidden;"></div>
       </div>
       ${phase !== 3 && phase !== 4 ? `<div class="side-label left">&laquo; Slower</div><div class="side-label right">Faster &raquo;</div>` : ""}
       <div class="hint" id="hint"></div>
@@ -167,7 +168,7 @@ async function runInteractiveTrial({ phase, mediaPath, isDemo, trialIndex, total
   const video = document.getElementById("trialVideo");
   video.muted = silent;
   const gate = document.getElementById("stageGate");
-  
+
   await playVideoWhenReady(video, gate);
 
   if (phase === 2) runPhase2(video, trialParams, isDemo, onFinish);
@@ -196,14 +197,23 @@ function playVideoWhenReady(video, gateEl) {
 
 function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
 
-
-function revealResultAndContinue(html, onContinue, delayMs = 1500) {
+function revealResultAndContinue(html, onContinue) {
   const readout = document.getElementById("readout");
   const hint = document.getElementById("hint");
   readout.style.visibility = "visible";
-  readout.innerHTML = html;
+  readout.innerHTML = `
+    ${html}
+    <div class="btn-row" style="margin-top:1rem; position: relative; z-index: 9999;">
+      <button class="btn" id="nextTrialBtn" style="pointer-events: auto; position: relative; z-index: 9999;">Next</button>
+    </div>
+  `;
   if (hint) hint.textContent = "";
-  setTimeout(onContinue, delayMs);
+  setTimeout(() => {
+    const nextBtn = document.getElementById("nextTrialBtn");
+    if (nextBtn) {
+      nextBtn.addEventListener("click", onContinue, { once: true });
+    }
+  }, 10); 
 }
 
 /* Phase 2: Direct Resolution.  speed = mouse_position*2 + noise (noise is
@@ -211,7 +221,7 @@ function revealResultAndContinue(html, onContinue, delayMs = 1500) {
 function runPhase2(video, trialParams, isDemo, onFinish) {
   const stage = document.getElementById("stage");
   document.getElementById("hint").innerHTML = "Move your mouse left/right, then <b>CLICK</b> when the speed feels <b style='color: var(--orange-2)'>NATURAL</b>.";
-  
+
   const startTime = performance.now();
   const noise = trialParams.noise || 0;
   let speed = clamp(1.0 + noise, 0.1, 3);
@@ -312,7 +322,7 @@ function runPhase3(video, trialParams, isDemo, onFinish) {
    every `tick_ms` in the backend-provided `direction`.
    First click -> reveal Threshold immediately and KEEP it on screen.
    Second click -> reveal Tolerance BELOW the still-visible Threshold,
-   then pause 1s before continuing. */
+   then show the Next button (no more auto-advance). */
 function runPhase4(video, trialParams, isDemo, onFinish) {
   const stage = document.getElementById("stage");
   const hint = document.getElementById("hint");
@@ -331,7 +341,7 @@ function runPhase4(video, trialParams, isDemo, onFinish) {
     tickTimer = setInterval(() => {
       speed = clamp(speed + direction * step, 0.05, 3);
       video.playbackRate = speed;
-      
+
     }, tickMs);
   }, delayMs);
 
@@ -339,7 +349,7 @@ function runPhase4(video, trialParams, isDemo, onFinish) {
     clicks += 1;
     if (clicks === 1) {
       thresholdSpeed = speed;
-     
+
       readout.style.visibility = "visible";
       readout.innerHTML = `Threshold: ${Math.round(thresholdSpeed * 100)}%`;
       hint.innerHTML = "<b style='color:var(--tan)'>CLICK AGAIN</b> when it feels <b style='color:var(--tan)'>TOO FAST or TOO SLOW.</b>";

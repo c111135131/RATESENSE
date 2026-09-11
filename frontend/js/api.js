@@ -1,5 +1,5 @@
 /* Thin wrapper around the ADAPT REST API (SRS section 8). */
-const API_BASE = window.ADAPT_API_BASE || "https://ratesense-backend.onrender.com/api/v1";
+const API_BASE = window.ADAPT_API_BASE || "http://127.0.0.1:8123/api/v1";
 // http://127.0.0.1:8123/api/v1
 // https://ratesense-backend.onrender.com/api/v1
 
@@ -31,6 +31,10 @@ const Api = {
   completeExperiment: (id) => apiRequest(`/experiments/${id}/complete`, { method: "POST" }),
   nextState: (id) => apiRequest(`/experiments/${id}/next`, { method: "POST" }),
   getMedia: (id) => apiRequest(`/experiments/${id}/media`),
+
+  getSurveyProgress: (experimentId) => apiRequest(`/tester/${experimentId}`),
+  submitSurveyAnswer: (experimentId, payload) =>
+  apiRequest(`/tester/${experimentId}/answer`, { method: "POST", body: payload }),
 
   uploadPhase1: (experimentId, blob) => {
     const form = new FormData();

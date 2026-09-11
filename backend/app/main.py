@@ -6,7 +6,7 @@ from fastapi.staticfiles import StaticFiles
 
 from . import models, seed
 from .database import engine, SessionLocal
-from .routers import experiments, phase1, demo, trials, media, admin
+from .routers import experiments, phase1, demo, tester, trials, media, admin
 
 models.Base.metadata.create_all(bind=engine)
 
@@ -17,8 +17,11 @@ app.add_middleware(
     allow_origins=[
         "https://ratesense.onrender.com",  
         "http://127.0.0.1:5173",          
+        "http://localhost:5173",   
         "http://127.0.0.1:5500",
-        "http://127.0.0.1:8123"     
+        "http://localhost:5500",
+        "http://127.0.0.1:8123",     
+        "http://localhost:8123"       
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -31,6 +34,7 @@ app.include_router(phase1.router)
 app.include_router(demo.router)
 app.include_router(trials.router)
 app.include_router(media.router)
+app.include_router(tester.router)
 app.include_router(admin.router)
 
 MEDIA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "media")

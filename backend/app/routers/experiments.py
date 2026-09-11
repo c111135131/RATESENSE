@@ -14,8 +14,11 @@ router = APIRouter(prefix="/api/v1/experiments", tags=["experiments"])
 
 def assign_media(db: Session, experiment_id: str):
     predefined = seed.get_predefined_media(db)
-    order = predefined[:]
-    random.shuffle(order)
+
+    num_to_select = len(predefined)
+    print(num_to_select)
+    order = random.sample(predefined, num_to_select)
+    
     for idx, media in enumerate(order, start=1):
         db.add(models.ExperimentMedia(
             experiment_id=experiment_id, display_order=idx, media_id=media.media_id
