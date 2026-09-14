@@ -14,6 +14,8 @@ if not DATABASE_URL:
     DB_PATH = os.path.join(BASE_DIR, "adapt.db")
     DATABASE_URL = f"sqlite:///{DB_PATH}"
 
+    
+
 if "sqlite" in DATABASE_URL:
     engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 else:
@@ -21,7 +23,8 @@ else:
         DATABASE_URL,
         pool_size=5,          
         max_overflow=10,      
-        pool_recycle=3600     
+        pool_recycle=3600,
+        connect_args={"sslmode": "require"}     
     )
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
