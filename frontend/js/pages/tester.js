@@ -87,8 +87,40 @@ Pages.userQuestionnaire = async () => {
     Router.advance();
     return;
   }
-  renderSurveyQuestion(progress.current_question);
+  console.log("progress.current_question")
+  console.log(progress.current_question)
+
+  if (progress.current_question === 0) {
+    renderSurveyIntro();
+  } else {
+    renderSurveyQuestion(progress.current_question);
+  }
 };
+
+function renderSurveyIntro() {
+  renderInto(pageShell(`
+    <div class="survey-card">
+      <h1 class="brand-title" style="font-size:2.5rem;">About This Survey</h1>
+      <p class="subtitle" style="color:var(--black);">Before we wrap up, we'd like to ask you a short, 10-question survey
+          about your age, viewing habits, and how you use variable playback
+          speed on streaming platforms.<br>Your answers help us understand how
+          different types of viewers perceive and judge video speed, and are
+          used only for this research -- there are no right or wrong answers.
+      </p>
+      <p style="line-height:1.6; opacity:0.8; margin-bottom:0;">
+        It should take about 2 minutes. You can leave and come back later --
+        your progress is saved automatically after each question.
+      </p>
+    </div>
+    <div class="btn-row">
+      <button class="btn" id="surveyStartBtn">NEXT</button>
+    </div>
+  `));
+
+  document.getElementById("surveyStartBtn").addEventListener("click", () => {
+    renderSurveyQuestion(0);
+  });
+}
 
 function renderSurveyQuestion(index) {
   const total = SURVEY_QUESTIONS.length;
