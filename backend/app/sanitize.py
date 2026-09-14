@@ -14,10 +14,14 @@ means every future render site is protected automatically, rather than
 relying on each one to remember to escape on its own.
 """
 import html
+import os
 import re
 
 _TAG_RE = re.compile(r"<[^>]*>")
 MAX_TEXT_LEN = 300
+
+_UNSAFE_FILENAME_CHARS_RE = re.compile(r"[^A-Za-z0-9._-]")
+MAX_FILENAME_LEN = 120
 
 
 def sanitize_text(value):
@@ -28,3 +32,13 @@ def sanitize_text(value):
     value = _TAG_RE.sub("", value)           # strip any HTML tags entirely
     value = html.escape(value, quote=True)   # escape whatever special chars remain
     return value.strip()
+
+def sanitize_filename(original: str) -> str:
+    """Never trust a client-supplied filename directly as a filesystem
+    path component. os.path.basename() strips any directory components
+    (defeats "../../etc/passwd"-style path traversal), then anything
+    outside a conservative safe character set is replaced with "_"."""
+    base = os.path.basename(original or "upload")
+    base = _UNSAFE_FILENAME_CHARS_RE.sub("_", base)
+    base = base[:MAX_FILENAME_LEN]
+    return base or "upload"

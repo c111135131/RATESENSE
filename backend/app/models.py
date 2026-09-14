@@ -32,6 +32,7 @@ class Media(Base):
     media_id = Column(Integer, primary_key=True, autoincrement=True)
     filename = Column(String, nullable=False)
     media_path = Column(String, nullable=False)
+    is_active = Column(Boolean, nullable=False, default=True)
 
     phase3_actual_speed_override = Column(Float, nullable=True)
     phase4_direction_override = Column(Integer, nullable=True)

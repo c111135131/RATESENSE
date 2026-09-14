@@ -1,12 +1,15 @@
 import csv
 import io
 import os
+import os
+import uuid
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, UploadFile, File
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from .. import models, params, speed_utils, seed, config_store
+from ..sanitize import sanitize_text, sanitize_filename
 from ..auth import require_admin, verify_login
 from ..database import get_db
 from ..responses import ok, fail
@@ -297,6 +300,7 @@ def list_media(db: Session = Depends(get_db), _admin: None = Depends(require_adm
             "media_id": m.media_id,
             "filename": m.filename,
             "media_path": m.media_path,
+            "is_active": m.is_active,
             "phase3_actual_speed": m.phase3_actual_speed_override,
             "phase4_direction": m.phase4_direction_override,
             "phase4_delay_ms": m.phase4_delay_ms_override,
@@ -423,3 +427,152 @@ def update_settings(
         "available_media_count": available,
         "warning": warning,
     })
+
+# ---------------------------------------------------------------------------
+# Video upload / deactivate / activate / delete (admin panel feature).
+# Paste these 4 endpoints into your existing admin.py. Make sure these
+# imports are present near the top of the file:
+#
+#   import os
+#   import uuid
+#   from fastapi import UploadFile, File
+#   from .. import models, params, speed_utils, seed, config_store
+#   from ..sanitize import sanitize_text, sanitize_filename
+#
+# (add whatever's missing to your existing import lines -- `os` is almost
+# certainly already imported since export_csv/cleanup use it)
+# ---------------------------------------------------------------------------
+
+ALLOWED_VIDEO_EXTENSIONS = {".mp4", ".webm", ".mov", ".m4v"}
+MAX_UPLOAD_BYTES = 200 * 1024 * 1024  # 200 MB -- adjust to taste
+
+# Same directory phase1.py's self-recordings live under (backend/app/media),
+# just the top level rather than the recordings/ subfolder.
+MEDIA_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "media")
+
+
+@router.post("/media/upload")
+async def upload_media(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    _admin: None = Depends(require_admin),
+):
+    """Add a new predefined video to the pool. It becomes eligible for
+    random assignment to NEW experiments immediately (existing
+    experiments already in progress are unaffected, per SRS 5)."""
+    ext = os.path.splitext(file.filename or "")[1].lower()
+    if ext not in ALLOWED_VIDEO_EXTENSIONS:
+        return fail(
+            f"Unsupported file type '{ext or '(none)'}'. Allowed: {', '.join(sorted(ALLOWED_VIDEO_EXTENSIONS))}",
+            "INVALID_FILE_TYPE", 422,
+        )
+
+    # Never trust the client's filename directly (path traversal defense),
+    # and prefix with a short random id so a same-named upload can never
+    # silently overwrite an existing video file on disk.
+    safe_name = sanitize_filename(file.filename)
+    stored_filename = f"{uuid.uuid4().hex[:8]}_{safe_name}"
+    dest_path = os.path.join(MEDIA_DIR, stored_filename)
+
+    total_bytes = 0
+    try:
+        with open(dest_path, "wb") as out:
+            while True:
+                chunk = await file.read(1024 * 1024)
+                if not chunk:
+                    break
+                total_bytes += len(chunk)
+                if total_bytes > MAX_UPLOAD_BYTES:
+                    out.close()
+                    if os.path.exists(dest_path):
+                        os.remove(dest_path)
+                    return fail("File too large (limit 200 MB).", "FILE_TOO_LARGE", 413)
+                out.write(chunk)
+    except Exception:
+        if os.path.exists(dest_path):
+            os.remove(dest_path)
+        raise
+
+    media = models.Media(
+        filename=stored_filename,
+        media_path=f"/media/{stored_filename}",
+        is_active=True,
+    )
+    db.add(media)
+    db.commit()
+    db.refresh(media)
+
+    return ok({
+        "media_id": media.media_id,
+        "filename": media.filename,
+        "media_path": media.media_path,
+        "is_active": media.is_active,
+    }, status_code=201)
+
+
+@router.post("/media/{media_id}/deactivate")
+def deactivate_media(media_id: int, db: Session = Depends(get_db), _admin: None = Depends(require_admin)):
+    """Soft delete: excludes this video from future experiments' random
+    pool (see seed.get_predefined_media), but keeps the file and DB row
+    intact -- past experiments that already reference it via
+    ExperimentMedia / ExperimentTrial keep working exactly as before."""
+    media = db.query(models.Media).get(media_id)
+    if not media:
+        return fail("Media not found.", "NOT_FOUND", 404)
+    if media.filename == seed.DEMO_VIDEO[0]:
+        return fail("The demo video can't be deactivated.", "PROTECTED_MEDIA", 400)
+
+    media.is_active = False
+    db.commit()
+    return ok({"media_id": media.media_id, "is_active": media.is_active})
+
+
+@router.post("/media/{media_id}/activate")
+def activate_media(media_id: int, db: Session = Depends(get_db), _admin: None = Depends(require_admin)):
+    """Undo a deactivation -- makes the video eligible for random
+    assignment to new experiments again."""
+    media = db.query(models.Media).get(media_id)
+    if not media:
+        return fail("Media not found.", "NOT_FOUND", 404)
+
+    media.is_active = True
+    db.commit()
+    return ok({"media_id": media.media_id, "is_active": media.is_active})
+
+
+@router.delete("/media/{media_id}")
+def delete_media(media_id: int, db: Session = Depends(get_db), _admin: None = Depends(require_admin)):
+    """Permanently delete -- ONLY allowed if this video was never actually
+    used by any experiment (no ExperimentMedia / ExperimentTrial rows
+    reference it). Use /deactivate instead for a video that's already in
+    use, to avoid orphaning historical trial data or breaking an
+    in-progress experiment's playback."""
+    media = db.query(models.Media).get(media_id)
+    if not media:
+        return fail("Media not found.", "NOT_FOUND", 404)
+    if media.filename == seed.DEMO_VIDEO[0]:
+        return fail("The demo video can't be deleted.", "PROTECTED_MEDIA", 400)
+
+    in_use = (
+        db.query(models.ExperimentMedia).filter(models.ExperimentMedia.media_id == media_id).first()
+        or db.query(models.ExperimentTrial).filter(models.ExperimentTrial.media_id == media_id).first()
+    )
+    if in_use:
+        return fail(
+            "This video has already been used by at least one experiment and can't be permanently "
+            "deleted (it would orphan historical trial data). Use Deactivate instead to hide it from "
+            "future experiments while keeping past data intact.",
+            "MEDIA_IN_USE", 409,
+        )
+
+    if media.media_path:
+        file_path = os.path.join(MEDIA_DIR, os.path.basename(media.media_path))
+        if os.path.exists(file_path):
+            try:
+                os.remove(file_path)
+            except OSError:
+                pass
+
+    db.delete(media)
+    db.commit()
+    return ok({"deleted": True, "media_id": media_id})

@@ -1,6 +1,6 @@
 // http://127.0.0.1:8123/api/v1
 // https://ratesense-backend.onrender.com/api/v1
-const ADMIN_API_BASE = window.ADAPT_API_BASE || "http://127.0.0.1:8123/api/v1";
+const ADMIN_API_BASE = window.ADAPT_API_BASE || "https://ratesense-backend.onrender.com/api/v1";
 const TOKEN_KEY = "adapt_admin_token";
 
 const AdminState = {
@@ -53,6 +53,16 @@ const AdminApi = {
   updateSelfRecordingParams: (experimentId, payload) =>
     adminRequest(`/admin/experiments/${experimentId}/self-recording/params`, { method: "PUT", body: payload }),
   cleanup: () => adminRequest("/admin/cleanup", { method: "POST" }),
+
+    // 加在 AdminApi 物件裡
+  uploadMedia: (file) => {
+    const form = new FormData();
+    form.append("file", file);
+    return adminRequestForm("/admin/media/upload", form);
+  },
+  deactivateMedia: (mediaId) => adminRequest(`/admin/media/${mediaId}/deactivate`, { method: "POST" }),
+  activateMedia: (mediaId) => adminRequest(`/admin/media/${mediaId}/activate`, { method: "POST" }),
+  deleteMedia: (mediaId) => adminRequest(`/admin/media/${mediaId}`, { method: "DELETE" }),
 
   // CSV needs a custom header, so it can't be a plain <a href>: fetch it
   // as a blob ourselves and trigger the download via a throwaway link.
@@ -388,26 +398,40 @@ async function loadMediaLibrary() {
   }
 }
 
+// renderMediaLibrary() 裡，表格 rows 的產生方式要改：demo 影片不顯示停用/刪除按鈕
 function renderMediaLibrary() {
-  const rows = AdminState.mediaLibrary.map((m) => `
-    <tr data-media-id="${m.media_id}">
-      <td>${m.filename}</td>
-      <td>
-        <input type="number" step="0.01" class="p3-speed" value="${m.phase3_actual_speed ?? ""}" placeholder="auto" />
-        ${m.phase3_actual_speed !== null ? `<span class="admin-override-badge">override</span>` : ""}
-      </td>
-      <td>
-        <select class="p4-direction">
-          <option value="" ${m.phase4_direction === null ? "selected" : ""}>auto</option>
-          <option value="1" ${m.phase4_direction === 1 ? "selected" : ""}>1 (accelerate)</option>
-          <option value="-1" ${m.phase4_direction === -1 ? "selected" : ""}>-1 (decelerate)</option>
-        </select>
-      </td>
-      <td><input type="number" class="p4-delay" value="${m.phase4_delay_ms ?? ""}" placeholder="auto" /></td>
-      <td><input type="number" class="p4-tick" value="${m.phase4_tick_ms ?? ""}" placeholder="auto" /></td>
-      <td><button class="admin-btn small" data-save="${m.media_id}">Save</button></td>
-    </tr>
-  `).join("");
+  
+  const rows = AdminState.mediaLibrary.map((m) => {
+    const isDemo = m.filename === "demo_video.mp4";
+    return `
+      <tr data-media-id="${m.media_id}">
+        <td>
+          ${m.filename}
+          ${!m.is_active ? `<span class="admin-override-badge" style="background:rgba(255,255,255,0.15); color:rgba(255,255,255,0.65);">inactive</span>` : ""}
+        </td>
+        <td>
+          <input type="number" step="0.01" class="p3-speed" value="${m.phase3_actual_speed ?? ""}" placeholder="auto" />
+          ${m.phase3_actual_speed !== null ? `<span class="admin-override-badge">override</span>` : ""}
+        </td>
+        <td>
+          <select class="p4-direction">
+            <option value="" ${m.phase4_direction === null ? "selected" : ""}>auto</option>
+            <option value="1" ${m.phase4_direction === 1 ? "selected" : ""}>1 (accelerate)</option>
+            <option value="-1" ${m.phase4_direction === -1 ? "selected" : ""}>-1 (decelerate)</option>
+          </select>
+        </td>
+        <td><input type="number" class="p4-delay" value="${m.phase4_delay_ms ?? ""}" placeholder="auto" /></td>
+        <td><input type="number" class="p4-tick" value="${m.phase4_tick_ms ?? ""}" placeholder="auto" /></td>
+        <td>
+          <button class="admin-btn small" data-save="${m.media_id}">Save</button>
+          ${!isDemo ? `
+            <button class="admin-btn small" data-toggle-active="${m.media_id}" data-active="${m.is_active}">${m.is_active ? "Deactivate" : "Activate"}</button>
+            <button class="admin-btn small danger" data-delete="${m.media_id}">Delete</button>
+          ` : ""}
+        </td>
+      </tr>
+    `;
+  }).join("");
 
   renderInto(`
     <div class="admin-toolbar">
@@ -417,13 +441,26 @@ function renderMediaLibrary() {
       <h1 class="admin-title">Video Library</h1>
     </div>
     ${renderTrialCountSettings()}
+
+    <div class="admin-table-wrap" style="padding:1.25rem 1.5rem; margin-bottom:1.5rem;">
+      <h2 class="admin-section-title" style="margin-top:0;">Add a New Video</h2>
+      <p style="opacity:0.7; font-size:0.8rem; margin-bottom:0.75rem;">
+        Accepted formats: .mp4, .webm, .mov, .m4v (max 200 MB). Becomes eligible
+        for random assignment to NEW experiments immediately after upload.
+      </p>
+      <div style="display:flex; align-items:center; gap:0.75rem; flex-wrap:wrap;">
+        <input type="file" id="mediaUploadInput" accept=".mp4,.webm,.mov,.m4v" />
+        <button class="admin-btn small" id="btnUploadMedia">Upload</button>
+      </div>
+      <p class="admin-error" id="mediaUploadError" style="margin-top:0.5rem;"></p>
+    </div>
+
     <p style="opacity:0.75; font-size:0.85rem; max-width:40rem;">
-      These parameters are GLOBAL: changing a video's Phase3 <code>actual_speed</code>
-      or Phase4 <code>direction</code> / <code>delay_ms</code> / <code>tick_ms</code> here
-      applies to <b>every experiment</b> that uses this video from now on
-      &mdash; past experiments already run keep whatever value they actually used
-      (see each experiment's Trials table). Leave a field blank (or clear it and Save)
-      to fall back to the auto-generated (hash-based) value.
+      Video parameter overrides here are GLOBAL: changing a video's Phase3
+      <code>actual_speed</code> or Phase4 <code>direction</code> / <code>delay_ms</code> /
+      <code>tick_ms</code> applies to <b>every experiment</b> that uses this video from
+      now on. Leave a field blank (or clear it and Save) to fall back to the
+      auto-generated value.
     </p>
     <div class="admin-table-wrap">
       <table class="admin-table">
@@ -432,22 +469,36 @@ function renderMediaLibrary() {
       </table>
     </div>
   `);
-  
+
   document.getElementById("btnBackFromLibrary").addEventListener("click", loadExperimentList);
 
   document.getElementById("btnSaveTotalTrials").addEventListener("click", async () => {
     const errorEl = document.getElementById("totalTrialsError");
     errorEl.textContent = "";
     const val = Number(document.getElementById("totalTrialsInput").value);
-
     if (!Number.isInteger(val) || val < 1) {
       errorEl.textContent = "Enter a whole number of at least 1.";
       return;
     }
-
     try {
       const resp = await AdminApi.updateSettings({ total_trials: val });
       toast(resp.warning || "Saved -- applies to experiments created from now on.");
+      loadMediaLibrary();
+    } catch (e) {
+      errorEl.textContent = e.message;
+    }
+  });
+
+  document.getElementById("btnUploadMedia").addEventListener("click", async () => {
+    const input = document.getElementById("mediaUploadInput");
+    const errorEl = document.getElementById("mediaUploadError");
+    errorEl.textContent = "";
+    const file = input.files[0];
+    if (!file) { errorEl.textContent = "Choose a file first."; return; }
+
+    try {
+      await AdminApi.uploadMedia(file);
+      toast("Uploaded.");
       loadMediaLibrary();
     } catch (e) {
       errorEl.textContent = e.message;
@@ -458,21 +509,43 @@ function renderMediaLibrary() {
     btn.addEventListener("click", async () => {
       const mediaId = btn.getAttribute("data-save");
       const row = btn.closest("tr");
-      const speedVal = row.querySelector(".p3-speed").value;
-      const dirVal = row.querySelector(".p4-direction").value;
-      const delayVal = row.querySelector(".p4-delay").value;
-      const tickVal = row.querySelector(".p4-tick").value;
-
       const payload = {
-        phase3_actual_speed: speedVal === "" ? null : Number(speedVal),
-        phase4_direction: dirVal === "" ? null : Number(dirVal),
-        phase4_delay_ms: delayVal === "" ? null : Number(delayVal),
-        phase4_tick_ms: tickVal === "" ? null : Number(tickVal),
+        phase3_actual_speed: row.querySelector(".p3-speed").value === "" ? null : Number(row.querySelector(".p3-speed").value),
+        phase4_direction: row.querySelector(".p4-direction").value === "" ? null : Number(row.querySelector(".p4-direction").value),
+        phase4_delay_ms: row.querySelector(".p4-delay").value === "" ? null : Number(row.querySelector(".p4-delay").value),
+        phase4_tick_ms: row.querySelector(".p4-tick").value === "" ? null : Number(row.querySelector(".p4-tick").value),
       };
-
       try {
         await AdminApi.updateMediaParams(mediaId, payload);
-        toast(`Saved -- applies to every future use of ${row.querySelector("td").textContent}.`);
+        toast(`Saved -- applies to every future use of ${row.querySelector("td").textContent.trim()}.`);
+        loadMediaLibrary();
+      } catch (e) {
+        toast(e.message);
+      }
+    });
+  });
+
+  root().querySelectorAll("[data-toggle-active]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const mediaId = btn.getAttribute("data-toggle-active");
+      const isActive = btn.getAttribute("data-active") === "true";
+      try {
+        if (isActive) await AdminApi.deactivateMedia(mediaId);
+        else await AdminApi.activateMedia(mediaId);
+        loadMediaLibrary();
+      } catch (e) {
+        toast(e.message);
+      }
+    });
+  });
+
+  root().querySelectorAll("[data-delete]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const mediaId = btn.getAttribute("data-delete");
+      if (!confirm("Permanently delete this video? This only works if it was never used by any experiment.")) return;
+      try {
+        await AdminApi.deleteMedia(mediaId);
+        toast("Deleted.");
         loadMediaLibrary();
       } catch (e) {
         toast(e.message);
@@ -519,3 +592,26 @@ function renderTrialCountSettings() {
   }
   renderLogin();
 })();
+
+
+
+// 加一個跟 adminRequest 平行的 form-data 版本（因為上傳檔案不能用 JSON.stringify）
+async function adminRequestForm(path, formData, { method = "POST" } = {}) {
+  const headers = {};
+  if (AdminState.token) headers["X-Admin-Token"] = AdminState.token;
+
+  const res = await fetch(`${ADMIN_API_BASE}${path}`, { method, headers, body: formData });
+
+  if (res.status === 401) {
+    AdminState.token = null;
+    sessionStorage.removeItem(TOKEN_KEY);
+    renderLogin("Your session expired. Please log in again.");
+    throw new Error("Unauthorized");
+  }
+
+  const json = await res.json().catch(() => ({ success: false, message: "Invalid server response." }));
+  if (!res.ok || json.success === false) {
+    throw new Error(json.message || `Request failed (${res.status})`);
+  }
+  return json.data;
+}
