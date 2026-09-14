@@ -77,7 +77,7 @@ function moduleRow() {
     <div class="module-tooltip" id="moduleTooltip" aria-live="polite"></div>
   `;
 }
-//
+
 
 /* Wires up hover (mouse) + focus (keyboard/touch) on the circles rendered
    by moduleRow(), showing introTextByPhase[phase] in the tooltip beneath

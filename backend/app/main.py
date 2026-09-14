@@ -55,3 +55,4 @@ def on_startup():
 @app.get("/api/v1/health")
 def health():
     return {"success": True, "message": "ADAPT API is running.", "data": {}}
+

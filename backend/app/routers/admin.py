@@ -4,12 +4,12 @@ import os
 import os
 import uuid
 
-from fastapi import APIRouter, Depends, UploadFile, File
+from fastapi import APIRouter, Depends, UploadFile, File, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from .. import models, params, speed_utils, seed, config_store
-from ..sanitize import sanitize_text, sanitize_filename
+from ..sanitize import sanitize_filename
 from ..auth import require_admin, verify_login
 from ..database import get_db
 from ..responses import ok, fail
@@ -162,8 +162,18 @@ def cleanup_expired(db: Session = Depends(get_db), _admin: None = Depends(requir
 # DB browsing (so the admin doesn't need to open a separate DB tool)
 # ---------------------------------------------------------------------------
 @router.get("/experiments")
-def list_experiments(db: Session = Depends(get_db), _admin: None = Depends(require_admin)):
-    rows = db.query(models.Experiment).order_by(models.Experiment.created_at.desc()).all()
+def list_experiments(page: int = Query(1, ge=1),
+    size: int = Query(15, ge=1, le=100),
+    db: Session = Depends(get_db), 
+    _admin: None = Depends(require_admin)):
+    skip = (page - 1) * size
+    rows = (
+        db.query(models.Experiment)
+        .order_by(models.Experiment.created_at.desc())
+        .offset(skip)
+        .limit(size)
+        .all()
+    )
     return ok([
         {
             "experiment_id": e.experiment_id,

@@ -12,6 +12,6 @@ PHASE2_NOISE_RANGE = (-0.1, 0.1)
 
 # Phase 4 (Threshold and Tolerance) -- matches the SRS example exactly:
 #   Delay 3000 ms / Every 100 ms / Speed += 0.01
-PHASE4_DELAY_MS = 3000
+PHASE4_DELAY_MS = 2000
 PHASE4_TICK_MS = 100 
 PHASE4_STEP = 0.01

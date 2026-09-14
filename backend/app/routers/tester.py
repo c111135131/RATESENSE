@@ -70,9 +70,6 @@ def submit_survey_answer(experiment_id: str, payload: TesterInfo, db: Session = 
 
     row = _get_or_create(db, experiment_id)
 
-    # XSS protection: never trust client-submitted text, even though the
-    # frontend already sanitizes -- this is the real trust boundary, since
-    # client-side JS can always be bypassed (e.g. a raw curl POST).
     clean_value = sanitize_text(payload.value)
     setattr(row, payload.field, clean_value)
 

@@ -6,4 +6,5 @@ backend/app/media/recordings/*
 node_modules/
 .DS_Store
 README.md
-test.py
+env_var_test.py
+stress_test.py

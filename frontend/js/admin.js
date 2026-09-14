@@ -398,7 +398,7 @@ async function loadMediaLibrary() {
   }
 }
 
-// renderMediaLibrary() 裡，表格 rows 的產生方式要改：demo 影片不顯示停用/刪除按鈕
+
 function renderMediaLibrary() {
   
   const rows = AdminState.mediaLibrary.map((m) => {

@@ -10,8 +10,8 @@ router = APIRouter(prefix="/api/v1", tags=["trials"])
 
 
 def _ordered_media_for_experiment(db: Session, experiment_id: str):
-    """5 predefined videos (randomized order at experiment creation) followed
-    by the participant's own self-recorded video -- 6 videos total, used
+    """n predefined videos (randomized order at experiment creation) followed
+    by the participant's own self-recorded video -- n+1 videos total, used
     identically across Phase 2/3/4 (SRS section 5).
     """
     rows = (

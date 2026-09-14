@@ -17,12 +17,7 @@ def get_demo_info(
     experiment_id: Optional[str] = Query(None),
     db: Session = Depends(get_db),
 ):
-    """All Demo pages (Phase 2-4) use the same predefined demo video.
-    Demo interactions are never recorded (record_data: false), but the
-    demo still gets real backend-generated parameters (same generator as
-    real trials, just keyed on "demo" instead of a trial_index) so the
-    practice run behaves identically to the real thing.
-    """
+    """All Demo pages (Phase 2-4) use the same predefined demo video."""
     demo_media = seed.get_demo_media(db)
     data = {
         "phase": phase,

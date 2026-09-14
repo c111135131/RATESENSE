@@ -27,9 +27,6 @@ def get_or_create_config(db: Session) -> models.AppConfig:
 
 
 def get_total_trials(db: Session) -> int:
-    """How many predefined videos to randomly assign to a NEW experiment
-    (the participant's own self-recording is always added on top of this,
-    per SRS -- this setting only controls the predefined-video count)."""
     return get_or_create_config(db).total_trials
 
 

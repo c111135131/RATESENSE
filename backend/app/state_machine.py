@@ -1,5 +1,4 @@
 """Backend-controlled experiment state machine (SRS 8.9).
-
 The frontend never decides the next page -- it always asks the backend.
 """
 

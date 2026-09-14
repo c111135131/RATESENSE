@@ -13,11 +13,7 @@ router = APIRouter(prefix="/api/v1/experiments", tags=["experiments"])
 
 
 def assign_media(db: Session, experiment_id: str):
-    """Randomly assign N predefined experiment videos to a new experiment,
-    where N = config_store.get_total_trials(db) (admin-editable in the
-    Video Library page, default 5). Clamped to however many predefined
-    videos actually exist -- random.sample() would raise ValueError if
-    asked for more items than the pool contains."""
+    """Randomly assign N predefined experiment videos to a new experiment"""
     predefined = seed.get_predefined_media(db)
 
     configured_total = config_store.get_total_trials(db)

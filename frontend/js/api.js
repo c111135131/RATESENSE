@@ -47,9 +47,6 @@ const Api = {
     return apiRequest("/phase1/complete", { method: "POST", form });
   },
 
-  // experimentId is optional (Demo can be viewed before an experiment
-  // exists) but is passed whenever available so the backend can seed a
-  // per-participant-but-still-deterministic set of demo parameters.
   getDemo: (phase, experimentId) =>
     apiRequest(`/demo?phase=${phase}${experimentId ? `&experiment_id=${encodeURIComponent(experimentId)}` : ""}`),
   completeDemo: (experimentId, phase) =>
@@ -59,10 +56,6 @@ const Api = {
     apiRequest(`/trials/next?experiment_id=${experimentId}&phase=${phase}`),
   submitTrial: (payload) => apiRequest("/trials", { method: "POST", body: payload }),
 
-  exportCsvUrl: () => `${API_BASE}/admin/export-csv`,
-
-  // Resolve a backend-relative media path (e.g. "/media/video01.mp4") into
-  // a fully-qualified URL against the backend's origin.
   mediaUrl: (path) => {
     if (!path) return "";
     if (/^https?:\/\//i.test(path)) return path;

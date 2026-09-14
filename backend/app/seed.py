@@ -1,21 +1,11 @@
 """Seed the Media table by scanning backend/app/media/ for video files.
 
 Per SRS section 5 (Experiment Design):
-  Every experiment uses N predefined videos (admin-configurable, see
-  config_store.py) + 1 self-recorded video. Future version: randomly
-  select from the Media table (already supported -- see
-  experiments.py's assign_media, and admin.py's upload/deactivate
-  endpoints let an admin grow or shrink that pool from the frontend).
-
-Predefined videos are NOT hardcoded here. On first startup (empty DB),
-this scans backend/app/media/ for video files and creates one Media row
+scans backend/app/media/ for video files and creates one Media row
 per file found, using the actual filename -- so adding/renaming/removing
 files in that folder before first launch is all you need to do; nothing
 in this file needs to change.
 
-The demo video is the one exception: it's identified by a fixed filename
-(DEMO_VIDEO) and always seeded FIRST, so it consistently ends up with the
-lowest media_id and sorts first wherever ordering matters.
 """
 import os
 
