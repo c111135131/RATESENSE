@@ -104,7 +104,7 @@ async function runNextRealTrial(phase) {
     mediaId: trialData.media.media_id,
     isDemo: false,
     trialIndex: trialData.trial_index,
-    totalTrials: 6,
+    totalTrials: trialData.total_trials || 6,
     trialParams: trialData, // { noise } | { actual_speed } | { delay_ms, tick_ms, step, direction }
     onFinish: async (result) => {
       try {

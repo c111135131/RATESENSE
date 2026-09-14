@@ -6,3 +6,4 @@ backend/app/media/recordings/*
 node_modules/
 .DS_Store
 README.md
+test.py

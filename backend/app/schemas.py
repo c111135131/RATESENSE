@@ -37,3 +37,6 @@ class TesterInfo(BaseModel):
     question_index: int
     field: str
     value: str
+
+class SettingsUpdateRequest(BaseModel):
+    total_trials: int

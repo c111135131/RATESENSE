@@ -139,3 +139,11 @@ class TesterInfo(Base):
     satisfaction = Column(String, nullable=True)
 
     updated_at = Column(DateTime, default=now_toronto, onupdate=now_toronto)
+
+class AppConfig(Base):
+    """Singleton global configuration, admin-editable via Video Library.
+    Always exactly one row (id=1) -- see config_store.py."""
+    __tablename__ = "app_config"
+
+    id = Column(Integer, primary_key=True)
+    total_trials = Column(Integer, nullable=False, default=5)

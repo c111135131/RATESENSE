@@ -6,11 +6,11 @@ from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
-from .. import models, params, speed_utils
+from .. import models, params, speed_utils, seed, config_store
 from ..auth import require_admin, verify_login
 from ..database import get_db
 from ..responses import ok, fail
-from ..schemas import AdminLoginRequest, MediaParamsOverride
+from ..schemas import AdminLoginRequest, MediaParamsOverride, SettingsUpdateRequest
 from ..timeutils import now_toronto
 
 router = APIRouter(prefix="/api/v1/admin", tags=["admin"])
@@ -382,4 +382,44 @@ def update_self_recording_params(
         "phase4_direction": row.phase4_direction_override,
         "phase4_delay_ms": row.phase4_delay_ms_override,
         "phase4_tick_ms": row.phase4_tick_ms_override,
+    })
+
+# ---------------------------------------------------------------------------
+# Global settings (admin panel feature): how many predefined videos get
+# randomly assigned to each NEW experiment. Add these two endpoints into
+# your existing admin.py. Make sure this import is present near the top:
+# ---------------------------------------------------------------------------
+@router.get("/settings")
+def get_settings(db: Session = Depends(get_db), _admin: None = Depends(require_admin)):
+    total_trials = config_store.get_total_trials(db)
+    available = len(seed.get_predefined_media(db))
+    return ok({
+        "total_trials": total_trials,
+        "available_media_count": available,
+    })
+
+
+@router.put("/settings")
+def update_settings(
+    payload: SettingsUpdateRequest,
+    db: Session = Depends(get_db),
+    _admin: None = Depends(require_admin),
+):
+    if payload.total_trials < 1:
+        return fail("total_trials must be at least 1.", "INVALID_VALUE", 422)
+
+    available = len(seed.get_predefined_media(db))
+    config_store.set_total_trials(db, payload.total_trials)
+
+    warning = None
+    if payload.total_trials > available:
+        warning = (
+            f"Only {available} predefined videos exist in the Media table right now; "
+            f"new experiments will use all {available} until more videos are added."
+        )
+
+    return ok({
+        "total_trials": payload.total_trials,
+        "available_media_count": available,
+        "warning": warning,
     })

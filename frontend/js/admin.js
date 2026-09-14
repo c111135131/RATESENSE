@@ -44,6 +44,9 @@ const AdminApi = {
   getExperiment: (id) => adminRequest(`/admin/experiments/${id}`),
   listMedia: () => adminRequest("/admin/media"),
 
+  getSettings: () => adminRequest("/admin/settings"),
+  updateSettings: (payload) => adminRequest("/admin/settings", { method: "PUT", body: payload }),
+
   updateMediaParams: (mediaId, payload) =>
     adminRequest(`/admin/media/${mediaId}/params`, { method: "PUT", body: payload }),
 
@@ -372,7 +375,12 @@ function renderDetail() {
 /* ---------------------------------------------------------------------- */
 async function loadMediaLibrary() {
   try {
-    AdminState.mediaLibrary = await AdminApi.listMedia();
+    const [mediaList, settings] = await Promise.all([
+      AdminApi.listMedia(),
+      AdminApi.getSettings(),
+    ]);
+    AdminState.mediaLibrary = mediaList;
+    AdminState.settings = settings;
     AdminState.view = "media";
     renderMediaLibrary();
   } catch (e) {
@@ -408,6 +416,7 @@ function renderMediaLibrary() {
     <div class="admin-header">
       <h1 class="admin-title">Video Library</h1>
     </div>
+    ${renderTrialCountSettings()}
     <p style="opacity:0.75; font-size:0.85rem; max-width:40rem;">
       These parameters are GLOBAL: changing a video's Phase3 <code>actual_speed</code>
       or Phase4 <code>direction</code> / <code>delay_ms</code> / <code>tick_ms</code> here
@@ -423,8 +432,27 @@ function renderMediaLibrary() {
       </table>
     </div>
   `);
-
+  
   document.getElementById("btnBackFromLibrary").addEventListener("click", loadExperimentList);
+
+  document.getElementById("btnSaveTotalTrials").addEventListener("click", async () => {
+    const errorEl = document.getElementById("totalTrialsError");
+    errorEl.textContent = "";
+    const val = Number(document.getElementById("totalTrialsInput").value);
+
+    if (!Number.isInteger(val) || val < 1) {
+      errorEl.textContent = "Enter a whole number of at least 1.";
+      return;
+    }
+
+    try {
+      const resp = await AdminApi.updateSettings({ total_trials: val });
+      toast(resp.warning || "Saved -- applies to experiments created from now on.");
+      loadMediaLibrary();
+    } catch (e) {
+      errorEl.textContent = e.message;
+    }
+  });
 
   root().querySelectorAll("[data-save]").forEach((btn) => {
     btn.addEventListener("click", async () => {
@@ -451,6 +479,29 @@ function renderMediaLibrary() {
       }
     });
   });
+}
+
+function renderTrialCountSettings() {
+  const s = AdminState.settings || { total_trials: 5, available_media_count: 5 };
+  return `
+    <div class="admin-table-wrap" style="padding:1.25rem 1.5rem; margin-bottom:2rem;">
+      <h2 class="admin-section-title" style="margin-top:0;">Trials Per Phase</h2>
+      <p style="opacity:0.7; font-size:0.8rem; margin-bottom:0.75rem;">
+        How many predefined videos get randomly assigned to each NEW experiment
+        (the participant's own self-recording is always added on top of this
+        count). Currently ${s.available_media_count} predefined video(s) exist
+        in the Media table. This only affects experiments created AFTER you
+        save -- experiments already in progress keep whatever count they
+        started with.
+      </p>
+      <div style="display:flex; align-items:center; gap:0.75rem;">
+        <input type="number" min="1" id="totalTrialsInput" value="${s.total_trials}"
+               style="width:6rem; padding:0.4rem 0.6rem; border-radius:0.3rem; border:1px solid rgba(255,255,255,0.25); background:rgba(255,255,255,0.06); color:var(--white);" />
+        <button class="admin-btn small" id="btnSaveTotalTrials">Save</button>
+      </div>
+      <p class="admin-error" id="totalTrialsError" style="margin-top:0.5rem;"></p>
+    </div>
+  `;
 }
 
 /* ---------------------------------------------------------------------- */

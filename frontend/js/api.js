@@ -33,8 +33,7 @@ const Api = {
   getMedia: (id) => apiRequest(`/experiments/${id}/media`),
 
   getSurveyProgress: (experimentId) => apiRequest(`/tester/${experimentId}`),
-  submitSurveyAnswer: (experimentId, payload) =>
-  apiRequest(`/tester/${experimentId}/answer`, { method: "POST", body: payload }),
+  submitSurveyAnswer: (experimentId, payload) => apiRequest(`/tester/${experimentId}/answer`, { method: "POST", body: payload }),
 
   uploadPhase1: (experimentId, blob) => {
     const form = new FormData();

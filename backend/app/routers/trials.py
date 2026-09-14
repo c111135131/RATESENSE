@@ -72,6 +72,8 @@ def get_next_trial(experiment_id: str = Query(...), phase: int = Query(..., ge=2
     media = {"media_id": media_entry["media_id"], "media_path": media_entry["media_path"]}
 
     data = {"trial_index": trial_index, "media": media}
+    data["total_trials"] = len(media_list)
+    
     if phase == 2:
         data["noise"] = speed_utils.trial_noise(experiment_id, phase, trial_index)
     elif phase == 3:

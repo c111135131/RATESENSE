@@ -4,7 +4,7 @@ import random
 from fastapi import APIRouter, Depends, Path
 from sqlalchemy.orm import Session
 
-from .. import models, seed, state_machine
+from .. import models, seed, state_machine, config_store
 from ..database import get_db
 from ..responses import ok, fail
 from ..timeutils import now_toronto
@@ -13,11 +13,17 @@ router = APIRouter(prefix="/api/v1/experiments", tags=["experiments"])
 
 
 def assign_media(db: Session, experiment_id: str):
+    """Randomly assign N predefined experiment videos to a new experiment,
+    where N = config_store.get_total_trials(db) (admin-editable in the
+    Video Library page, default 5). Clamped to however many predefined
+    videos actually exist -- random.sample() would raise ValueError if
+    asked for more items than the pool contains."""
     predefined = seed.get_predefined_media(db)
 
-    num_to_select = len(predefined)
+    configured_total = config_store.get_total_trials(db)
+    num_to_select = min(configured_total, len(predefined))
     order = random.sample(predefined, num_to_select)
-    
+
     for idx, media in enumerate(order, start=1):
         db.add(models.ExperimentMedia(
             experiment_id=experiment_id, display_order=idx, media_id=media.media_id
