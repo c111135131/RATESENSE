@@ -344,7 +344,8 @@ function runPhase4(video, trialParams, isDemo, onFinish) {
     }, tickMs);
   }, delayMs);
 
-  function onClick() {
+  function onClick(e) {
+    if (e.type === "touchend") e.preventDefault();
     clicks += 1;
     if (clicks === 1) {
       thresholdSpeed = speed;
