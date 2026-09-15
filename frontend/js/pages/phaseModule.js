@@ -226,7 +226,24 @@ function runPhase2(video, trialParams, isDemo, onFinish) {
   let speed = clamp(1.0 + noise, 0.1, 3);
 
   video.preservesPitch = false;
+  // fix for iOS versions
+  video.webkitPreservesPitch = false;
+  video.mozPreservesPitch = false;
   video.playbackRate = speed;
+
+    let pendingSpeed = speed;
+  let rafScheduled = false;
+  function applyPendingSpeed() {
+    rafScheduled = false;
+    video.playbackRate = pendingSpeed;
+  }
+  function scheduleSpeedUpdate(newSpeed) {
+    pendingSpeed = newSpeed;
+    if (!rafScheduled) {
+      rafScheduled = true;
+      requestAnimationFrame(applyPendingSpeed);
+    }
+  }
 
   function onMove(e) {
     if (e.type === "touchmove") e.preventDefault();
@@ -235,7 +252,7 @@ function runPhase2(video, trialParams, isDemo, onFinish) {
     const rect = stage.getBoundingClientRect();
     const pos = clamp((clientX - rect.left) / rect.width, 0, 1);
     speed = clamp(pos * 2 + noise, 0.1, 3);
-    video.playbackRate = speed;
+    scheduleSpeedUpdate(speed);
   }
 
   function onClick() {
@@ -271,6 +288,9 @@ function runPhase3(video, trialParams, isDemo, onFinish) {
   const startTime = performance.now();
 
   const actualSpeed = trialParams.actual_speed;
+  video.preservesPitch = false;
+  video.webkitPreservesPitch = false;
+  video.mozPreservesPitch = false;
   video.playbackRate = clamp(actualSpeed, 0.1, 4);
 
   let estimate = 1.0;
