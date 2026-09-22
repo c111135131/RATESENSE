@@ -2,7 +2,7 @@ import os
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
+from .cached_static import CachedMediaFiles
 
 from . import models, seed
 from .database import engine, SessionLocal
@@ -40,7 +40,7 @@ app.include_router(admin.router)
 MEDIA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "media")
 os.makedirs(MEDIA_DIR, exist_ok=True)
 os.makedirs(os.path.join(MEDIA_DIR, "recordings"), exist_ok=True)
-app.mount("/media", StaticFiles(directory=MEDIA_DIR), name="media")
+app.mount("/media", CachedMediaFiles(directory=MEDIA_DIR), name="media")
 
 
 @app.on_event("startup")
