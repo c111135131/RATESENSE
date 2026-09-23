@@ -1,7 +1,6 @@
 import csv
 import io
 import os
-import os
 import uuid
 
 from fastapi import APIRouter, Depends, UploadFile, File, Query
@@ -14,7 +13,7 @@ from ..auth import require_admin, verify_login
 from ..database import get_db
 from ..responses import ok, fail
 from ..schemas import AdminLoginRequest, MediaParamsOverride, SettingsUpdateRequest
-from ..timeutils import now_toronto
+from ..cleanup import perform_cleanup
 
 router = APIRouter(prefix="/api/v1/admin", tags=["admin"])
 
@@ -129,34 +128,13 @@ def export_csv(db: Session = Depends(get_db), _admin: None = Depends(require_adm
         headers={"Content-Disposition": "attachment; filename=experiment_data.csv"},
     )
 
-
 @router.post("/cleanup")
 def cleanup_expired(db: Session = Depends(get_db), _admin: None = Depends(require_admin)):
-    """Find expired experiments, delete self-recordings, update status,
-    keep experiment data (SRS section 7)."""
-    now = now_toronto()
-    expired = (
-        db.query(models.Experiment)
-        .filter(models.Experiment.expired_at.isnot(None), models.Experiment.expired_at < now)
-        .filter(models.Experiment.status == models.ExperimentStatus.IN_PROGRESS)
-        .all()
-    )
-
-    count = 0
-    for exp in expired:
-        for rec in exp.self_recordings:
-            if not rec.deleted:
-                if rec.video_path and os.path.exists(rec.video_path):
-                    try:
-                        os.remove(rec.video_path)
-                    except OSError:
-                        pass
-                rec.deleted = True
-        exp.status = models.ExperimentStatus.EXPIRED
-        count += 1
-
-    db.commit()
-    return ok({"expired_count": count})
+    """Manually trigger the same cleanup the 24-hour background task runs
+    automatically (see scheduler.py) -- useful for an on-demand sweep
+    without waiting for the next scheduled run."""
+    result = perform_cleanup(db)
+    return ok(result)
 
 # ---------------------------------------------------------------------------
 # DB browsing (so the admin doesn't need to open a separate DB tool)

@@ -1,5 +1,5 @@
 import os
-
+import asyncio
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .cached_static import CachedMediaFiles
@@ -7,6 +7,7 @@ from .cached_static import CachedMediaFiles
 from . import models, seed
 from .database import engine, SessionLocal
 from .routers import experiments, phase1, demo, tester, trials, media, admin
+from .scheduler import run_cleanup_loop
 
 models.Base.metadata.create_all(bind=engine)
 
@@ -44,15 +45,15 @@ app.mount("/media", CachedMediaFiles(directory=MEDIA_DIR), name="media")
 
 
 @app.on_event("startup")
-def on_startup():
+async def on_startup():
     db = SessionLocal()
     try:
         seed.seed_media(db)
     finally:
         db.close()
+        asyncio.create_task(run_cleanup_loop())
 
 
 @app.get("/api/v1/health")
 def health():
     return {"success": True, "message": "ADAPT API is running.", "data": {}}
-

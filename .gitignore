@@ -8,3 +8,4 @@ node_modules/
 README.md
 env_var_test.py
 stress_test.py
+Dockerfile
