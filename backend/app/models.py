@@ -104,9 +104,11 @@ class ExperimentTrial(Base):
 
     # Phase 2 (Direct Resolution)
     selected_speed = Column(Float, nullable=True)
+
     # Phase 3 (Speed Estimation)
     actual_speed = Column(Float, nullable=True)
     estimated_speed = Column(Float, nullable=True)
+    
     # Phase 2 & 3 shared
     hesitation_ms = Column(Integer, nullable=True)
     # Phase 4 (Threshold and Tolerance)

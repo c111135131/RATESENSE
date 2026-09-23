@@ -441,14 +441,6 @@ def update_settings(
 # ---------------------------------------------------------------------------
 # Video upload / deactivate / activate / delete (admin panel feature).
 # Paste these 4 endpoints into your existing admin.py. Make sure these
-# imports are present near the top of the file:
-#
-#   import os
-#   import uuid
-#   from fastapi import UploadFile, File
-#   from .. import models, params, speed_utils, seed, config_store
-#   from ..sanitize import sanitize_text, sanitize_filename
-#
 # (add whatever's missing to your existing import lines -- `os` is almost
 # certainly already imported since export_csv/cleanup use it)
 # ---------------------------------------------------------------------------

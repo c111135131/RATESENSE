@@ -8,7 +8,7 @@ experimental parameter used by Phase 2/3/4. Both the real-trial API
 PHASE2_NOISE_RANGE = (-0.1, 0.1)
 
 # Phase 3 (Speed Estimation): system-controlled actual playback speed
-# PHASE3_ACTUAL_SPEED_RANGE = [0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0]
+PHASE3_ACTUAL_SPEED_RANGE = {"low": 0.01, "high": 2.0}
 
 # Phase 4 (Threshold and Tolerance) -- matches the SRS example exactly:
 #   Delay 3000 ms / Every 100 ms / Speed += 0.01

@@ -28,7 +28,7 @@ def trial_noise(experiment_id: str, phase: int, trial_key) -> float:
 
 def trial_actual_speed(experiment_id: str, phase: int, trial_key) -> float:
     """Phase 3: the system-controlled actual playback speed for this trial."""
-    return _rng(experiment_id, phase, trial_key).uniform(0.01, 2.0)
+    return _rng(experiment_id, phase, trial_key).uniform(params.PHASE3_ACTUAL_SPEED_RANGE["low"], params.PHASE3_ACTUAL_SPEED_RANGE["high"])
 
 
 def trial_direction(experiment_id: str, phase: int, trial_key) -> int:

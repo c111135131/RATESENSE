@@ -36,9 +36,6 @@ STATE_TRANSITIONS = {
     "phase4-complete": "completed",
 }
 
-# Number of real trials per phase (5 predefined videos + 1 self-recorded video)
-TRIALS_PER_PHASE = 6
-
 # Which phase number a given real-test/demo state belongs to
 PHASE_OF_STATE = {
     "phase1-recording": 1,
@@ -46,7 +43,6 @@ PHASE_OF_STATE = {
     "phase3-demo": 3, "phase3-realtest": 3,
     "phase4-demo": 4, "phase4-realtest": 4,
 }
-
 
 def next_state(current_state: str) -> str:
     return STATE_TRANSITIONS.get(current_state, current_state)
