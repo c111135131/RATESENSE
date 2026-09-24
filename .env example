@@ -1,0 +1,7 @@
+ADMIN_USERNAME=your_admin_username
+ADMIN_PASSWORD=your_strong_password
+ADMIN_TOKEN_SECRET=your_random_secret
+
+POSTGRES_USER=adapt
+POSTGRES_PASSWORD=your_database_password
+POSTGRES_DB=adapt

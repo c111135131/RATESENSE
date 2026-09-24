@@ -1,11 +1,3 @@
-"""Runs the expired-experiment cleanup automatically every 24 hours, so
-an admin no longer has to remember to click "Cleanup Expired" manually.
-
-Started once on FastAPI startup (see main.py's on_startup) and keeps
-running for the lifetime of the process via asyncio.create_task() -- no
-separate cron job / external scheduler process needed for a
-single-instance deployment.
-"""
 import asyncio
 import logging
 

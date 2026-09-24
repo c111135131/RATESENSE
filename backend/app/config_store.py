@@ -1,13 +1,3 @@
-"""Global, admin-editable experiment settings.
-
-Currently just one setting: how many predefined videos get randomly
-assigned to each NEW experiment (Video Library feature). Stored as a
-single-row table (id=1) rather than a per-experiment value, so changing it
-in the admin panel affects every experiment created from that point on --
-Phase 2/3/4 all share the same ExperimentMedia rows (SRS: "All experiment
-phases only use these six videos"), so this one setting cascades to all
-three phases automatically.
-"""
 from sqlalchemy.orm import Session
 
 from . import models

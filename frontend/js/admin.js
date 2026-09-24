@@ -54,7 +54,6 @@ const AdminApi = {
     adminRequest(`/admin/experiments/${experimentId}/self-recording/params`, { method: "PUT", body: payload }),
   cleanup: () => adminRequest("/admin/cleanup", { method: "POST" }),
 
-    // 加在 AdminApi 物件裡
   uploadMedia: (file) => {
     const form = new FormData();
     form.append("file", file);

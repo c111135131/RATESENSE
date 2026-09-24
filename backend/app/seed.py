@@ -5,7 +5,6 @@ scans backend/app/media/ for video files and creates one Media row
 per file found, using the actual filename -- so adding/renaming/removing
 files in that folder before first launch is all you need to do; nothing
 in this file needs to change.
-
 """
 import os
 
@@ -14,8 +13,6 @@ from . import models
 
 DEMO_VIDEO = ("demo_video.mp4", "/media/demo_video.mp4")
 
-# Same directory backend/app/main.py mounts as /media, and the same
-# extension whitelist backend/app/routers/admin.py's upload endpoint uses.
 MEDIA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "media")
 ALLOWED_VIDEO_EXTENSIONS = {".mp4", ".webm", ".mov", ".m4v"}
 
@@ -47,8 +44,6 @@ def seed_media(db: Session):
     if db.query(models.Media).count() > 0:
         return
 
-    # Demo video first, always -- gives it the lowest media_id so it
-    # naturally sorts first even without relying on frontend sorting.
     db.add(models.Media(filename=DEMO_VIDEO[0], media_path=DEMO_VIDEO[1], is_active=True))
 
     for filename, path in _scan_media_dir_for_videos(MEDIA_DIR):

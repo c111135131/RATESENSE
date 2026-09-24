@@ -1,0 +1,54 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-adapt}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-adapt}
+      POSTGRES_DB: ${POSTGRES_DB:-adapt}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-adapt}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-adapt}:${POSTGRES_PASSWORD:-adapt}@db:5432/${POSTGRES_DB:-adapt}
+      # A plain local `postgres` container (unlike Render/Neon/Supabase)
+      # doesn't speak SSL out of the box -- see backend/app/database.py's
+      # DB_SSLMODE handling. Remove this line entirely if you point
+      # DATABASE_URL at a managed cloud Postgres instead.
+      DB_SSLMODE: disable
+      ADMIN_USERNAME: ${ADMIN_USERNAME:?set ADMIN_USERNAME in your .env file}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?set ADMIN_PASSWORD in your .env file}
+      ADMIN_TOKEN_SECRET: ${ADMIN_TOKEN_SECRET:?set ADMIN_TOKEN_SECRET in your .env file}
+    volumes:
+      # Persists predefined/uploaded videos + self-recordings across
+      # container restarts/rebuilds. Path matches where main.py computes
+      # MEDIA_DIR relative to app/main.py inside the image (see
+      # backend/Dockerfile: code lands at /app/app/...).
+      - media_data:/app/app/media
+    ports:
+      - "8123:8123"
+
+  frontend:
+    build:
+      context: ./frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "5173:80"
+
+volumes:
+  db_data:
+  media_data:

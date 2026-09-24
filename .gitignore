@@ -5,7 +5,6 @@ backend/app/media/recordings/*
 !backend/app/media/recordings/.gitkeep
 node_modules/
 .DS_Store
-README.md
 env_var_test.py
 stress_test.py
-Dockerfile
+.env

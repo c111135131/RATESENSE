@@ -9,9 +9,6 @@ from ..schemas import TesterInfo
 
 router = APIRouter(prefix="/api/v1/tester", tags=["tester"])
 
-# Order matters -- this IS the question order (0-based) the frontend walks
-# through. Keep this in sync with SURVEY_QUESTIONS in
-# frontend/js/pages/survey.js (same field names, same order).
 SURVEY_FIELDS = [
     "age", "gender", "occupation", "watch_hours", "platforms",
     "content_types", "preferred_speed", "adjust_behavior", "reasons", "satisfaction",

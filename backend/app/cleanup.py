@@ -14,31 +14,7 @@ from .timeutils import now_toronto
 
 
 def perform_cleanup(db: Session) -> dict:
-    """Two separate things happen here, in order:
-
-    1. Expire stale IN_PROGRESS experiments.
-       Any experiment whose expired_at has passed gets marked EXPIRED,
-       and its self-recording (if any) is deleted from disk -- exactly
-       what the old cleanup endpoint always did. All trial/survey data is
-       KEPT.
-
-    2. Hard-delete empty EXPIRED/ABANDONED experiments.
-       Any experiment that is now EXPIRED or ABANDONED, AND never
-       progressed past terms-agreement, is deleted entirely -- not just
-       marked. current_state == "terms-agreement" is the state every
-       experiment starts in immediately after creation (see
-       routers/experiments.py's create_experiment), so this precisely
-       identifies "the participant never even got past the consent
-       screen": there is no self-recording, no ExperimentTrial rows, and
-       no SurveyResponse row attached yet -- just the empty Experiment
-       row and the ExperimentMedia rows randomly assigned at creation.
-       Keeping those forever is pure wasted space, so they're removed
-       completely rather than just flagged.
-
-       Note: an experiment expired in step 1 above that also happens to
-       still be at terms-agreement is picked up by step 2 in the SAME
-       call -- no need to wait for a second cleanup cycle.
-    """
+    
     now = now_toronto()
 
     # --- Step 1: expire stale IN_PROGRESS experiments (unchanged behavior) ---

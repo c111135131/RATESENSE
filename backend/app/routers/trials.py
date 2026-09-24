@@ -10,10 +10,7 @@ router = APIRouter(prefix="/api/v1", tags=["trials"])
 
 
 def _ordered_media_for_experiment(db: Session, experiment_id: str):
-    """n predefined videos (randomized order at experiment creation) followed
-    by the participant's own self-recorded video -- n+1 videos total, used
-    identically across Phase 2/3/4 (SRS section 5).
-    """
+
     rows = (
         db.query(models.ExperimentMedia)
         .filter(models.ExperimentMedia.experiment_id == experiment_id)

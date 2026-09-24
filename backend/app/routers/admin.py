@@ -82,8 +82,6 @@ def export_csv(db: Session = Depends(get_db), _admin: None = Depends(require_adm
     trials = db.query(models.ExperimentTrial).all()
     media_lookup = _media_name_lookup(db)
 
-    # experiment_id -> TesterInfo row, built once so we do a single query
-    # instead of re-querying the DB inside the loop for every trial.
     survey_lookup = {s.experiment_id: s for s in db.query(models.TesterInfo).all()}
 
     buffer = io.StringIO()
@@ -192,8 +190,6 @@ def get_experiment_detail(experiment_id: str, db: Session = Depends(get_db), _ad
     )
     media_lookup = _media_name_lookup(db)
 
-    # --- the 5 predefined videos: read-only here (global override, edit
-    # via PUT /admin/media/{media_id}/params in the Video Library screen) ---
     media_entries = []
     for m in media_rows:
         effective = _effective_phase34_params(
@@ -309,9 +305,6 @@ def update_media_params(
     if not row:
         return fail("Media not found.", "NOT_FOUND", 404)
 
-    # exclude_unset (not exclude_none!) so a field the client didn't send
-    # is left untouched, but a field explicitly sent as `null` DOES clear
-    # that specific override.
     updates = payload.dict(exclude_unset=True)
     if "phase3_actual_speed" in updates:
         row.phase3_actual_speed_override = updates["phase3_actual_speed"]
@@ -416,18 +409,10 @@ def update_settings(
         "warning": warning,
     })
 
-# ---------------------------------------------------------------------------
-# Video upload / deactivate / activate / delete (admin panel feature).
-# Paste these 4 endpoints into your existing admin.py. Make sure these
-# (add whatever's missing to your existing import lines -- `os` is almost
-# certainly already imported since export_csv/cleanup use it)
-# ---------------------------------------------------------------------------
 
 ALLOWED_VIDEO_EXTENSIONS = {".mp4", ".webm", ".mov", ".m4v"}
 MAX_UPLOAD_BYTES = 200 * 1024 * 1024  # 200 MB -- adjust to taste
 
-# Same directory phase1.py's self-recordings live under (backend/app/media),
-# just the top level rather than the recordings/ subfolder.
 MEDIA_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "media")
 
 
@@ -447,9 +432,6 @@ async def upload_media(
             "INVALID_FILE_TYPE", 422,
         )
 
-    # Never trust the client's filename directly (path traversal defense),
-    # and prefix with a short random id so a same-named upload can never
-    # silently overwrite an existing video file on disk.
     safe_name = sanitize_filename(file.filename)
     stored_filename = f"{uuid.uuid4().hex[:8]}_{safe_name}"
     dest_path = os.path.join(MEDIA_DIR, stored_filename)
